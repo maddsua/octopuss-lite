@@ -1,12 +1,12 @@
 import type { JSONResponse } from "./api.ts";
-import type { RateLimiterOptions } from "./rateLimiter.ts";
-import type { OriginManagerOptions } from "./originManager.ts";
 
 export interface RouteConfig {
 	expand?: boolean;
 	url?: string;
-	rateLimiter?: RateLimiterOptions;
-	origin?: OriginManagerOptions;
+	checks: {
+		origin?: boolean;
+		ratelimit?: boolean;
+	};
 };
 
 export interface Context {
