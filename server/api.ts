@@ -14,5 +14,12 @@ export class JSONResponse<T extends object> {
 		this.status = init?.status || 200;
 		if (this.body) this.headers.set('content-type', 'application/json');
 	}
+
+	toResponse(): Response {
+		return new Response(this.body, {
+			headers: this.headers,
+			status: this.status
+		});
+	}
 };
 
