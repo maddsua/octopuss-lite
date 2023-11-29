@@ -28,15 +28,29 @@ export const startServer = async (opts?: StartServerOptions) => {
 		const { pathname } = new URL(request.url);
 		const pathComponents = pathname.slice(1).split('/');
 
-		const route = routesPool[pathname];
-		if (!route) {
+		let routectx = routesPool[pathname];
+
+		if (!routectx) {
+			for (let idx = pathComponents.length - 1; idx >= 0; idx--) {
+
+				const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
+				const nextCtx = routesPool[nextRoute];
+
+				if (nextCtx?.expand) {
+					routectx = nextCtx;
+					break;
+				}
+			}
+		}
+
+		if (!routectx) {
 			return new JSONResponse({
 				error_text: 'route not found'
 			}, { status: 404 }).toResponse();
 		}
 
 		try {
-			const handlerResponse = await route.handler(request, {} as Context);
+			const handlerResponse = await routectx.handler(request, {} as Context);
 			return handlerResponse instanceof JSONResponse ? handlerResponse.toResponse() : handlerResponse;
 		} catch (error) {
 			console.error('Octo middleware error:', (error as Error).message || error);
