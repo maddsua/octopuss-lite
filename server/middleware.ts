@@ -1,4 +1,4 @@
-import { Context, findAllRoutes, loadRoutes } from "./routes.ts";
+import { Context, RouteResponse, findAllRoutes, loadRoutes } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
 
 interface OctopussOptions {
@@ -29,9 +29,18 @@ export const startServer = async (opts?: StartServerOptions) => {
 				status: 404
 			});
 		}
+
+		let handlerResponse: RouteResponse
 	
-		const handlerResponse = await route.handler(request, {} as Context);
-		
+		try {
+			handlerResponse = await route.handler(request, {} as Context);
+		} catch (error) {
+			console.error('Octo middleware error:', (error as Error).message || error);
+			handlerResponse = new JSONResponse({
+				error_text: 'unhandled middleware error'
+			}, { status: 500 });
+		}
+
 		return handlerResponse instanceof JSONResponse ? new Response(handlerResponse.body, {
 			headers: handlerResponse.headers,
 			status: handlerResponse.status
