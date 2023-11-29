@@ -1,12 +1,14 @@
 import type { JSONResponse } from "./api.ts";
 
+export interface RouteChecksControl {
+	origin?: boolean;
+	ratelimit?: boolean;
+};
+
 export interface RouteConfig {
 	expand?: boolean;
 	url?: string;
-	checks: {
-		origin?: boolean;
-		ratelimit?: boolean;
-	};
+	checks?: RouteChecksControl;
 };
 
 export interface Context {
@@ -19,8 +21,11 @@ export type RouteResponse = JSONResponse<object> | Response;
 export type RouteHandler = (request: Request, context: Context) => Promise<RouteResponse> | RouteResponse;
 
 export interface RouteCtx {
-	expand: boolean;
-	url: string;
+	url: {
+		pathname: string;
+		expand: boolean;
+	};
+	checks?: RouteChecksControl;
 	handler: RouteHandler;
 };
 
@@ -76,14 +81,17 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 			const fsRoutedUrl = indexIndex === -1 ? pathNoExt : (indexIndex === 0 ? '/' : pathNoExt.slice(0, indexIndex));
 			const customUrl = config.url?.replace(/[\/\*]+$/, '');
 
-			const url = typeof customUrl === 'string' ? customUrl : fsRoutedUrl;
-			if (!url.startsWith('/')) throw new Error(`Invalid route url: ${url}`);
+			const pathname = typeof customUrl === 'string' ? customUrl : fsRoutedUrl;
+			if (!pathname.startsWith('/')) throw new Error(`Invalid route url: ${pathname}`);
 
-			result[url] = {
+			result[pathname] = {
 				handler,
-				url,
-				expand: typeof config.expand === 'boolean' ? config.expand : (config.url?.endsWith('*') || false)
-				//	big todo: add warning for a case when both bool val and url with asterist are set
+				url: {
+					pathname,
+					expand: typeof config.expand === 'boolean' ? config.expand : (config.url?.endsWith('*') || false)
+					//	big todo: add warning for a case when both bool val and url with asterist are set
+				},
+				checks: config.checks,
 			} satisfies RouteCtx;
 
 		} catch (error) {
