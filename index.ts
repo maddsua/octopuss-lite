@@ -19,8 +19,11 @@ const findAllHandlers = async (handlersDir: string) => {
 	return entries.filter(item => ['js', 'mjs', 'ts', 'mts'].some(ext => item.endsWith(`.${ext}`)));
 };
 
-const loadHandlers = async (modulePaths: string[]): Promise<RouteCtx[]> => {
-	return await Promise.all(modulePaths.map(async item => {
+const loadHandlers = async (modulePaths: string[]): Promise<Record<string, RouteCtx>> => {
+
+	const result: Record<string, RouteCtx> = {};
+
+	await Promise.all(modulePaths.map(async item => {
 		try {
 
 			const importPath = `./${item}`;
@@ -40,8 +43,8 @@ const loadHandlers = async (modulePaths: string[]): Promise<RouteCtx[]> => {
 
 			const url = typeof customUrl === 'string' ? customUrl : fsRoutedUrl;
 			if (!url.startsWith('/')) throw new Error(`Invalid route url: ${url}`);
-	
-			return {
+
+			result[url] = {
 				handler,
 				url,
 				expand: typeof config.expand === 'boolean' ? config.expand : (config.url?.endsWith('*') || false)
@@ -51,6 +54,8 @@ const loadHandlers = async (modulePaths: string[]): Promise<RouteCtx[]> => {
 			throw new Error(`Failed to import route module ${item}: ${(error as Error).message}`);
 		}
 	}));
+
+	return result;
 };
 
 const handlers = await loadHandlers(await findAllHandlers(searchDir))
@@ -61,7 +66,7 @@ Deno.serve(async (request) => {
 
 	const { pathname } = new URL(request.url);
 
-	const handler = handlers.find(item => item.url === pathname);
+	const handler = handlers[pathname];
 	if (!handler) {
 		return new Response(null, {
 			status: 404
