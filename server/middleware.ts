@@ -1,4 +1,4 @@
-import { Context, RouteResponse, findAllRoutes, loadRoutes } from "./routes.ts";
+import { findAllRoutes, loadRoutes, type Context } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
 
 interface OctopussOptions {
