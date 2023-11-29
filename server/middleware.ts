@@ -3,6 +3,7 @@ import { JSONResponse } from "./api.ts";
 
 interface OctopussOptions {
 	routesDir: string;
+//	defaultError?: 'json' | 'text';
 };
 
 interface StartServerOptions {
