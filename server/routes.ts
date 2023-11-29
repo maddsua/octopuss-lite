@@ -78,6 +78,7 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 				handler,
 				url,
 				expand: typeof config.expand === 'boolean' ? config.expand : (config.url?.endsWith('*') || false)
+				//	big todo: add warning for a case when both bool val and url with asterist are set
 			} satisfies RouteCtx;
 
 		} catch (error) {
