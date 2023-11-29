@@ -3,6 +3,9 @@ import { JSONResponse } from "./api.ts";
 
 interface OctopussOptions {
 	routesDir: string;
+	proxy?: {
+		forwardedHeader?: string;
+	}
 //	defaultError?: 'json' | 'text';
 };
 
@@ -26,30 +29,30 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 		const route = routes[pathname];
 		if (!route) {
-			return new Response(null, {
-				status: 404
-			});
+			return new JSONResponse({
+				error_text: 'route not found'
+			}, { status: 404 }).toResponse();
 		}
 
-		let handlerResponse: RouteResponse
-	
 		try {
-			handlerResponse = await route.handler(request, {} as Context);
+			const handlerResponse = await route.handler(request, {} as Context);
+			return handlerResponse instanceof JSONResponse ? handlerResponse.toResponse() : handlerResponse;
 		} catch (error) {
 			console.error('Octo middleware error:', (error as Error).message || error);
-			handlerResponse = new JSONResponse({
+			return new JSONResponse({
 				error_text: 'unhandled middleware error'
-			}, { status: 500 });
+			}, { status: 500 }).toResponse();
 		}
+	};
 
-		return handlerResponse instanceof JSONResponse ? new Response(handlerResponse.body, {
-			headers: handlerResponse.headers,
-			status: handlerResponse.status
-		}) : handlerResponse;
+	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
+		const middleware = await middlewareHandler(request, info);
+		middleware.headers.set('x-powered-by', 'octopuss');
+		return middleware;
 	};
 
 	if (!opts?.serve) {
-		return Deno.serve(middlewareHandler);
+		return Deno.serve(httpRequestHandler);
 	}
 
 	return Deno.serve(opts?.serve, middlewareHandler);
