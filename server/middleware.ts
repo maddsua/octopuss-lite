@@ -1,12 +1,15 @@
 import { findAllRoutes, loadRoutes, type Context } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
+import { OriginManagerOptions } from "./originManager.ts";
+import { RateLimiterOptions } from "./rateLimiter.ts";
 
 interface OctopussOptions {
 	routesDir: string;
 	proxy?: {
-		forwardedHeader?: string;
-	}
-//	defaultError?: 'json' | 'text';
+		forwardedIP?: string;
+	},
+	rateLimiter?: RateLimiterOptions;
+	origin?: OriginManagerOptions;
 };
 
 interface StartServerOptions {
