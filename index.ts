@@ -1,3 +1,4 @@
+import type { RouteConfig, RouteCtx } from "./server/api.ts";
 
 const searchDir = 'src/routes';
 
@@ -18,21 +19,28 @@ const findAllHandlers = async (handlersDir: string) => {
 	return entries.filter(item => ['js', 'mjs', 'ts', 'mts'].some(ext => item.endsWith(`.${ext}`)));
 };
 
-const loadHandlers = (modulePaths: string[]) => {
+const loadHandlers = async (modulePaths: string[]): Promise<RouteCtx[]> => {
+	return await Promise.all(modulePaths.map(async item => {
+		try {
 
-	const entries: Array<{
-		path: string;
-		url: string;
-	}> = [];
+			const importPath = `./${item}`;
 
-	for (const item of modulePaths) {
-		const pathname = item.slice(searchDir.length);
-		console.log(pathname);
-	}
+			const imported = await import(importPath);
+	
+			const handler = (imported['default'] || imported['handler']);
+			if (!handler || typeof handler !== 'function') throw new Error('No handler exported');
+	
+			const config = (imported['config'] || {}) as RouteConfig;
+			if (typeof config !== 'object') throw new Error('Config invalid');
+	
+			return { handler, config };
 
-	return entries;
+		} catch (error) {
+			throw new Error(`Failed to import route module ${item}: ${(error as Error).message}`);
+		}
+	}));
 };
 
-const handlers = loadHandlers(await findAllHandlers(searchDir))
+const handlers = await loadHandlers(await findAllHandlers(searchDir))
 
 console.log(handlers);
