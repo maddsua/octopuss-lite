@@ -16,21 +16,3 @@ export class JSONResponse<T extends object> {
 	}
 };
 
-export interface RouteConfig {
-	expand?: boolean;
-	url?: string;
-};
-
-export interface Context {
-	env: Record<string, string>;
-	requestID: string | null;
-};
-
-export type RouteResponse = JSONResponse<object> | Response;
-export type RouteHandler = (request: Request, context: Context) => Promise<RouteResponse>;
-
-export interface RouteCtx {
-	expand: boolean;
-	url: string;
-	handler: RouteHandler;
-};
