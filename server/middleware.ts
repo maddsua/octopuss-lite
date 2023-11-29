@@ -21,13 +21,14 @@ export const startServer = async (opts?: StartServerOptions) => {
 	const handlers = await findAllRoutes(searchDir);
 	if (!handlers.entries.length) throw new Error(`Failed to load route modules: no modules found in "${searchDir}"`);
 
-	const routes = await loadRoutes(handlers);
+	const routesPool = await loadRoutes(handlers);
 
 	const middlewareHandler: Deno.ServeHandler = async (request, info) => {
 
 		const { pathname } = new URL(request.url);
+		const pathComponents = pathname.slice(1).split('/');
 
-		const route = routes[pathname];
+		const route = routesPool[pathname];
 		if (!route) {
 			return new JSONResponse({
 				error_text: 'route not found'
@@ -52,8 +53,9 @@ export const startServer = async (opts?: StartServerOptions) => {
 	};
 
 	if (!opts?.serve) {
-		return Deno.serve(httpRequestHandler);
+		Deno.serve(httpRequestHandler);
+		return
 	}
 
-	return Deno.serve(opts?.serve, middlewareHandler);
+	Deno.serve(opts?.serve, middlewareHandler);
 };
