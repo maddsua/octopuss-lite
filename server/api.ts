@@ -30,6 +30,7 @@ export type RouteResponse = JSONResponse<object> | Response;
 export type RouteHandler = (request: Request, context: Context) => Promise<RouteResponse>;
 
 export interface RouteCtx {
-	config: RouteConfig;
+	expand: boolean;
+	url: string;
 	handler: RouteHandler;
 };
