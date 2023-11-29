@@ -48,5 +48,9 @@ export const startServer = async (opts?: StartServerOptions) => {
 		}) : handlerResponse;
 	};
 
-	Deno.serve(opts?.serve || {}, middlewareHandler);
+	if (!opts?.serve) {
+		return Deno.serve(middlewareHandler);
+	}
+
+	return Deno.serve(opts?.serve, middlewareHandler);
 };
