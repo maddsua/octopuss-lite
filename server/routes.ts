@@ -1,17 +1,11 @@
 import type { JSONResponse } from "./api.ts";
-import type { RateLimiterConfig } from "./rateLimiter.ts";
+import type { RateLimiterOptions } from "./rateLimiter.ts";
 import type { OriginManagerOptions } from "./originManager.ts";
 
 export interface RouteConfig {
 	expand?: boolean;
 	url?: string;
-	recaptcha?: {
-		enabled: boolean;
-		minScore?: number;
-	};
-	rateLimiter?: {
-		enabled: boolean;
-	} & Partial<RateLimiterConfig>;
+	rateLimiter?: RateLimiterOptions;
 	origin?: OriginManagerOptions;
 };
 
