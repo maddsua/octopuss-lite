@@ -18,6 +18,7 @@ export class JSONResponse<T extends object> {
 
 export interface RouteConfig {
 	expand?: boolean;
+	url?: string;
 };
 
 export interface Context {
@@ -29,6 +30,6 @@ export type RouteResponse = JSONResponse<object> | Response;
 export type RouteHandler = (request: Request, context: Context) => Promise<RouteResponse>;
 
 export interface RouteCtx {
-	cfg: RouteConfig;
+	config: RouteConfig;
 	handler: RouteHandler;
 };
