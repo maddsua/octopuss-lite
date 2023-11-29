@@ -58,7 +58,35 @@ const loadHandlers = async (modulePaths: string[]): Promise<Record<string, Route
 	return result;
 };
 
-const handlers = await loadHandlers(await findAllHandlers(searchDir))
+const handlers = await loadHandlers(await findAllHandlers(searchDir));
+/*
+interface InstanceConfig {
+	routesDir: string;
+	port: number;
+};
+
+class OctopussInstance {
+
+	routes: Record<string, RouteCtx> = {};
+	config: InstanceConfig;
+
+	constructor(config?: Partial<InstanceConfig>) {
+		this.config = Object.assign({
+			port: 8080,
+			routesDir: 'routes'
+		} satisfies InstanceConfig, config || {});
+	}
+
+	async load() {
+		const handlers = await findAllHandlers(searchDir);
+		if (!handlers.length) throw new Error(`Failed to load route modules: no modules found in "${this.config.routesDir}"`);
+		this.routes = await loadHandlers(handlers);
+	}
+
+	async start() {
+
+	}
+};*/
 
 console.log(handlers);
 
@@ -80,3 +108,6 @@ Deno.serve(async (request) => {
 		status: handlerResponse.status
 	}) : handlerResponse;
 });
+
+
+//Deno.shutdown()
