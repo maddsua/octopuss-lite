@@ -32,8 +32,14 @@ const loadHandlers = async (modulePaths: string[]): Promise<RouteCtx[]> => {
 	
 			const config = (imported['config'] || {}) as RouteConfig;
 			if (typeof config !== 'object') throw new Error('Config invalid');
+
+			const pathNoExtension = item.slice(searchDir.length, item.lastIndexOf('.'));
 	
-			return { handler, config };
+			return {
+				handler,
+				url: pathNoExtension,
+				expand: false
+			} satisfies RouteCtx;
 
 		} catch (error) {
 			throw new Error(`Failed to import route module ${item}: ${(error as Error).message}`);
