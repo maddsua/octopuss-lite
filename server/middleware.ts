@@ -1,7 +1,7 @@
 import { findAllRoutes, loadRoutes, type Context } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
-import { OriginManagerOptions } from "./originManager.ts";
-import { RateLimiterOptions } from "./rateLimiter.ts";
+import { OriginChecker, OriginManagerOptions } from "./originManager.ts";
+import { RateLimiter, RateLimiterOptions } from "./rateLimiter.ts";
 
 interface OctopussOptions {
 	routesDir: string;
@@ -25,6 +25,9 @@ export const startServer = async (opts?: StartServerOptions) => {
 	if (!handlers.entries.length) throw new Error(`Failed to load route modules: no modules found in "${searchDir}"`);
 
 	const routesPool = await loadRoutes(handlers);
+
+	const rateLimiter: RateLimiter | null = opts?.octo?.rateLimiter?.enabled ? new RateLimiter(opts.octo.rateLimiter) : null;
+	const originChecker: OriginChecker | null = opts?.octo?.origin?.enabled && opts.octo.origin.origins?.length ? new OriginChecker(opts.octo.origin.origins) : null;
 
 	const middlewareHandler: Deno.ServeHandler = async (request, info) => {
 
