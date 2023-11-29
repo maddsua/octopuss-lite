@@ -39,7 +39,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 				const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
 				const nextCtx = routesPool[nextRoute];
 
-				if (nextCtx?.expand) {
+				if (nextCtx?.url.expand) {
 					routectx = nextCtx;
 					break;
 				}
