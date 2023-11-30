@@ -80,6 +80,8 @@ export const startServer = async (opts?: StartServerOptions) => {
 				const requestedCorsMethod = request.headers.get('Access-Control-Request-Method');
 				const defaultCorsMethods = 'GET, POST, PUT, OPTIONS, DELETE';
 
+				if (!allowedOrigin) allowedOrigin = '*';
+
 				return new JSONResponse(null, {
 					status: 204,
 					headers: {
