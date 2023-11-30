@@ -45,7 +45,26 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 		}
 
-		const railwayRequestID = (opts?.octo?.proxy?.requestIdHeader ? request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) || 'test';
+		//	check request origin
+		if (originChecker) {
+			const originHeader = request.headers.get('origin');
+			if (!originHeader) {
+				return new JSONResponse({
+					error_text: 'client not verified'
+				}, { status: 403 }).toResponse();
+
+			}
+			if (!originChecker.check(originHeader)) {
+				console.log('Origin not allowed:', originHeader);
+				return new JSONResponse({
+					error_text: 'client not verified'
+				}, { status: 403 }).toResponse();
+
+			}
+		}
+
+
+		const requestID = (opts?.octo?.proxy?.requestIdHeader ? request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) || 'test';
 
 		const { pathname } = new URL(request.url);
 		const pathComponents = pathname.slice(1).split('/');
