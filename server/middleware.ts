@@ -1,4 +1,4 @@
-import { findAllRoutes, loadRoutes, type Context } from "./routes.ts";
+import { findAllRoutes, loadRoutes } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, OriginManagerOptions } from "./originManager.ts";
 import { RateLimiter, RateLimiterOptions } from "./rateLimiter.ts";
@@ -33,6 +33,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
 
+		const requestOrigin = request.headers.get('origin');
 		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ? request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) || info.remoteAddr.hostname;
 		const requestID = (opts?.octo?.proxy?.requestIdHeader ? request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) || 'test';
 		let allowedOrigin: string | null = null;
@@ -47,19 +48,15 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 			//	check request origin
 			if (originChecker) {
-				const originHeader = request.headers.get('origin');
-				if (!originHeader) {
+				if (!requestOrigin) {
 					return new JSONResponse({
 						error_text: 'client not verified'
 					}, { status: 403 }).toResponse();
-	
-				}
-				if (!originChecker.check(originHeader)) {
-					console.log('Origin not allowed:', originHeader);
+				} else if (!originChecker.check(requestOrigin)) {
+					console.log('Origin not allowed:', requestOrigin);
 					return new JSONResponse({
 						error_text: 'client not verified'
 					}, { status: 403 }).toResponse();
-	
 				}
 			}
 
@@ -95,7 +92,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 					}
 				}).toResponse();
 			}
-	
+
 			// find route function
 			let routectx = routesPool[pathname];
 			
