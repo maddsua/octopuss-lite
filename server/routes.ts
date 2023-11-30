@@ -1,4 +1,5 @@
 import type { JSONResponse } from "./api.ts";
+import { ServiceConsole } from "./console.ts";
 
 export interface RouteChecksControl {
 	origin?: boolean;
@@ -12,7 +13,7 @@ export interface RouteConfig {
 };
 
 export interface Context {
-	env: Record<string, string>;
+	console: ServiceConsole;
 	requestIP: string;
 	requestID: string | null;
 };
