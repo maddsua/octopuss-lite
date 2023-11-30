@@ -6,9 +6,10 @@ import { RateLimiter, RateLimiterOptions } from "./rateLimiter.ts";
 interface OctopussOptions {
 	routesDir: string;
 	proxy?: {
-		forwardedIP?: string;
+		forwardedIPHeader?: string;
+		requestIdHeader?: string;
 	},
-	rateLimiter?: RateLimiterOptions;
+	rateLimit?: RateLimiterOptions;
 	origin?: OriginManagerOptions;
 };
 
@@ -26,10 +27,25 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const routesPool = await loadRoutes(handlers);
 
-	const rateLimiter: RateLimiter | null = opts?.octo?.rateLimiter?.enabled ? new RateLimiter(opts.octo.rateLimiter) : null;
+	const rateLimiter: RateLimiter | null = opts?.octo?.rateLimit?.enabled ? new RateLimiter(opts.octo.rateLimit) : null;
 	const originChecker: OriginChecker | null = opts?.octo?.origin?.enabled && opts.octo.origin.origins?.length ? new OriginChecker(opts.octo.origin.origins) : null;
 
 	const middlewareHandler: Deno.ServeHandler = async (request, info) => {
+
+		const clientIP = (opts?.octo?.proxy?.forwardedIPHeader ? request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) || info.remoteAddr.hostname;
+
+		//	check rate limiter
+		if (rateLimiter) {
+			const rateCheck = rateLimiter.check({ ip: clientIP });
+			if (!rateCheck.ok) {
+				console.log(`Too many requests (${rateCheck.requests}). Wait for ${rateCheck.reset}s`);
+				return new JSONResponse({
+					error_text: 'too many requests'
+				}, { status: 429 }).toResponse();
+			}
+		}
+
+		const railwayRequestID = (opts?.octo?.proxy?.requestIdHeader ? request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) || 'test';
 
 		const { pathname } = new URL(request.url);
 		const pathComponents = pathname.slice(1).split('/');
