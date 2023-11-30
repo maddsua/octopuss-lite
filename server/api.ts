@@ -22,4 +22,3 @@ export class JSONResponse<T extends object> {
 		});
 	}
 };
-
