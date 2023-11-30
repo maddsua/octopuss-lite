@@ -2,6 +2,7 @@ import { findAllRoutes, loadRoutes, type Context } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, OriginManagerOptions } from "./originManager.ts";
 import { RateLimiter, RateLimiterOptions } from "./rateLimiter.ts";
+import { ServiceConsole } from "./console.ts";
 
 interface OctopussOptions {
 	routesDir: string;
@@ -30,80 +31,116 @@ export const startServer = async (opts?: StartServerOptions) => {
 	const rateLimiter: RateLimiter | null = opts?.octo?.rateLimit?.enabled ? new RateLimiter(opts.octo.rateLimit) : null;
 	const originChecker: OriginChecker | null = opts?.octo?.origin?.enabled && opts.octo.origin.origins?.length ? new OriginChecker(opts.octo.origin.origins) : null;
 
-	const middlewareHandler: Deno.ServeHandler = async (request, info) => {
+	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
 
-		const clientIP = (opts?.octo?.proxy?.forwardedIPHeader ? request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) || info.remoteAddr.hostname;
-
-		//	check rate limiter
-		if (rateLimiter) {
-			const rateCheck = rateLimiter.check({ ip: clientIP });
-			if (!rateCheck.ok) {
-				console.log(`Too many requests (${rateCheck.requests}). Wait for ${rateCheck.reset}s`);
-				return new JSONResponse({
-					error_text: 'too many requests'
-				}, { status: 429 }).toResponse();
-			}
-		}
-
-		//	check request origin
-		if (originChecker) {
-			const originHeader = request.headers.get('origin');
-			if (!originHeader) {
-				return new JSONResponse({
-					error_text: 'client not verified'
-				}, { status: 403 }).toResponse();
-
-			}
-			if (!originChecker.check(originHeader)) {
-				console.log('Origin not allowed:', originHeader);
-				return new JSONResponse({
-					error_text: 'client not verified'
-				}, { status: 403 }).toResponse();
-
-			}
-		}
-
-
+		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ? request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) || info.remoteAddr.hostname;
 		const requestID = (opts?.octo?.proxy?.requestIdHeader ? request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) || 'test';
+		let allowedOrigin: string | null = null;
+		let requestDisplayUrl = '/';
 
-		const { pathname } = new URL(request.url);
-		const pathComponents = pathname.slice(1).split('/');
+		const console = new ServiceConsole(requestID);
 
-		let routectx = routesPool[pathname];
+		const middleware = await (async () => {
 
-		if (!routectx) {
-			for (let idx = pathComponents.length - 1; idx >= 0; idx--) {
+			const { pathname, search } = new URL(request.url);
+			requestDisplayUrl = pathname + search;
 
-				const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
-				const nextCtx = routesPool[nextRoute];
-
-				if (nextCtx?.url.expand) {
-					routectx = nextCtx;
-					break;
+			//	check request origin
+			if (originChecker) {
+				const originHeader = request.headers.get('origin');
+				if (!originHeader) {
+					return new JSONResponse({
+						error_text: 'client not verified'
+					}, { status: 403 }).toResponse();
+	
+				}
+				if (!originChecker.check(originHeader)) {
+					console.log('Origin not allowed:', originHeader);
+					return new JSONResponse({
+						error_text: 'client not verified'
+					}, { status: 403 }).toResponse();
+	
 				}
 			}
-		}
 
-		if (!routectx) {
-			return new JSONResponse({
-				error_text: 'route not found'
-			}, { status: 404 }).toResponse();
-		}
+			//	check rate limiter
+			if (rateLimiter) {
+				const rateCheck = rateLimiter.check({ ip: requestIP });
+				if (!rateCheck.ok) {
+					console.log(`Too many requests (${rateCheck.requests}). Wait for ${rateCheck.reset}s`);
+					return new JSONResponse({
+						error_text: 'too many requests'
+					}, { status: 429 }).toResponse();
+				}
+			}
 
-		try {
-			const handlerResponse = await routectx.handler(request, {} as Context);
-			return handlerResponse instanceof JSONResponse ? handlerResponse.toResponse() : handlerResponse;
-		} catch (error) {
-			console.error('Octo middleware error:', (error as Error).message || error);
-			return new JSONResponse({
-				error_text: 'unhandled middleware error'
-			}, { status: 500 }).toResponse();
-		}
-	};
+			//	respond to CORS preflixgt
+			if (request.method == 'OPTIONS' && opts?.octo?.origin?.respondCORS !== false) {
 
-	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
-		const middleware = await middlewareHandler(request, info);
+				const requestedCorsHeaders = request.headers.get('Access-Control-Request-Headers');
+				const defaultCorsHeaders = 'Origin, X-Requested-With, Content-Type, Accept';
+
+				const requestedCorsMethod = request.headers.get('Access-Control-Request-Method');
+				const defaultCorsMethods = 'GET, POST, PUT, OPTIONS, DELETE';
+
+				return new JSONResponse(null, {
+					status: 204,
+					headers: {
+						'Access-Control-Allow-Methods': requestedCorsMethod || defaultCorsMethods,
+						//'Access-Control-Allow-Origin': allowedOrigin,
+						//	this one is gonna be appended later
+						'Access-Control-Allow-Headers': requestedCorsHeaders || defaultCorsHeaders,
+						'Access-Control-Max-Age': '3600',
+						'Access-Control-Allow-Credentials': 'true'
+					}
+				}).toResponse();
+			}
+	
+			// find route function
+			let routectx = routesPool[pathname];
+			
+			// match route function
+			if (!routectx) {
+				const pathComponents = pathname.slice(1).split('/');
+				for (let idx = pathComponents.length - 1; idx >= 0; idx--) {
+	
+					const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
+					const nextCtx = routesPool[nextRoute];
+	
+					if (nextCtx?.url.expand) {
+						routectx = nextCtx;
+						break;
+					}
+				}
+			}
+	
+			//	go cry in the corned if it's not found
+			if (!routectx) {
+				return new JSONResponse({
+					error_text: 'route not found'
+				}, { status: 404 }).toResponse();
+			}
+
+			//	execute route function
+			try {
+				const handlerResponse = await routectx.handler(request, { console, requestID, requestIP });
+				return handlerResponse instanceof JSONResponse ? handlerResponse.toResponse() : handlerResponse;
+			} catch (error) {
+				console.error('Octo middleware error:', (error as Error).message || error);
+				return new JSONResponse({
+					error_text: 'unhandled middleware error'
+				}, { status: 500 }).toResponse();
+			}
+
+		})();
+
+		//	add some headers so the shit always works
 		middleware.headers.set('x-powered-by', 'octopuss');
+		if (allowedOrigin) middleware.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+
+		//	log for, you know, reasons
+		console.log(`(${requestIP}) ${request.method} "${requestDisplayUrl}" --> ${middleware.status}`);
+
 		return middleware;
 	};
 
@@ -112,5 +149,5 @@ export const startServer = async (opts?: StartServerOptions) => {
 		return
 	}
 
-	Deno.serve(opts?.serve, middlewareHandler);
+	Deno.serve(opts?.serve, httpRequestHandler);
 };
