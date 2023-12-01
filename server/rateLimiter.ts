@@ -1,11 +1,7 @@
 
-interface RateLimiterConfig {
+export interface RateLimiterConfig {
 	period: number,
 	requests: number
-};
-
-export interface RateLimiterOptions extends Partial<RateLimiterConfig> {
-	enabled: boolean;
 };
 
 interface ActivityData {

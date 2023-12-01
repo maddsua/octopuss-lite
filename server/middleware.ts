@@ -1,7 +1,7 @@
 import { findAllRoutes, loadRoutes } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker } from "./originManager.ts";
-import { RateLimiter, RateLimiterOptions } from "./rateLimiter.ts";
+import { RateLimiter, type RateLimiterConfig } from "./rateLimiter.ts";
 import { ServiceConsole } from "./console.ts";
 
 interface OctopussOptions {
@@ -10,7 +10,7 @@ interface OctopussOptions {
 		forwardedIPHeader?: string;
 		requestIdHeader?: string;
 	},
-	rateLimit?: RateLimiterOptions;
+	rateLimit?: RateLimiterConfig;
 	handleCORS?: boolean;
 	allowOrigings?: string[];
 };
@@ -29,7 +29,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const routesPool = await loadRoutes(handlers);
 
-	const rateLimiter: RateLimiter | null = opts?.octo?.rateLimit?.enabled ? new RateLimiter(opts.octo.rateLimit) : null;
+	const rateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
 	const originChecker: OriginChecker | null = opts?.octo?.allowOrigings?.length ? new OriginChecker(opts.octo.allowOrigings) : null;
 
 	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
