@@ -1,10 +1,4 @@
 
-export interface OriginManagerOptions{
-	enabled?: boolean;
-	origins?: string[];
-	respondCORS?: boolean;
-};
-
 export class OriginChecker {
 
 	allowedOrigins: string[];
