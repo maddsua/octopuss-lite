@@ -1,6 +1,6 @@
 import { findAllRoutes, loadRoutes } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
-import { OriginChecker, OriginManagerOptions } from "./originManager.ts";
+import { OriginChecker } from "./originManager.ts";
 import { RateLimiter, RateLimiterOptions } from "./rateLimiter.ts";
 import { ServiceConsole } from "./console.ts";
 
@@ -11,7 +11,8 @@ interface OctopussOptions {
 		requestIdHeader?: string;
 	},
 	rateLimit?: RateLimiterOptions;
-	origin?: OriginManagerOptions;
+	handleCORS?: boolean;
+	allowOrigings?: string[];
 };
 
 interface StartServerOptions {
@@ -29,7 +30,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 	const routesPool = await loadRoutes(handlers);
 
 	const rateLimiter: RateLimiter | null = opts?.octo?.rateLimit?.enabled ? new RateLimiter(opts.octo.rateLimit) : null;
-	const originChecker: OriginChecker | null = opts?.octo?.origin?.enabled && opts.octo.origin.origins?.length ? new OriginChecker(opts.octo.origin.origins) : null;
+	const originChecker: OriginChecker | null = opts?.octo?.allowOrigings?.length ? new OriginChecker(opts.octo.allowOrigings) : null;
 
 	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
 
@@ -72,7 +73,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 
 			//	respond to CORS preflixgt
-			if (request.method == 'OPTIONS' && opts?.octo?.origin?.respondCORS !== false) {
+			if (request.method == 'OPTIONS' && opts?.octo?.handleCORS !== false) {
 
 				const requestedCorsHeaders = request.headers.get('Access-Control-Request-Headers');
 				const defaultCorsHeaders = 'Origin, X-Requested-With, Content-Type, Accept';
