@@ -26,8 +26,6 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
 
-	console.log(`\n%c Indexing functions in ${searchDir}... \n`, 'background-color: green; color: black');
-
 	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
 
 	const globalRateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;

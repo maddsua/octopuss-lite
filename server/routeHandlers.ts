@@ -40,6 +40,8 @@ type HandlersPool = Record<string, RouteCtx>;
 
 export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool> => {
 
+	console.log(`\n%c Indexing functions in ${fromDir}... \n`, 'background-color: green; color: black');
+
 	const allEntries: string[] = [];
 
 	const iterateDirectory = async (dir: string) => {
