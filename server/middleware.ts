@@ -1,4 +1,4 @@
-import { type StaticHandler, findAllRoutes, loadRoutes } from "./routeHandlers.ts";
+import { type StaticHandler, loadFunctionsFromFS } from "./routeHandlers.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
@@ -27,10 +27,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	console.log(`\n%c Indexing functions in ${searchDir}... \n`, 'background-color: green; color: black');
 
-	const handlers = await findAllRoutes(searchDir);
-	if (!handlers.entries.length) throw new Error(`Failed to load route functions: no modules found in "${searchDir}"`);
-
-	const routesPool = await loadRoutes(handlers);
+	const routesPool = await loadFunctionsFromFS(searchDir);
 
 	const globalRateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
 	const globalOriginChecker: OriginChecker | null = opts?.octo?.allowedOrigings?.length ? new OriginChecker(opts.octo.allowedOrigings) : null;
