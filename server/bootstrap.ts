@@ -9,4 +9,4 @@ await startServer({
 	}
 });
 
-console.log('%cStartup done', 'color: green');
+console.log('\n%c Startup done \n', 'background-color: green; color: black');
