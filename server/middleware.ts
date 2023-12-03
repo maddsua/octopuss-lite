@@ -2,6 +2,7 @@ import { type StaticHandler, loadFunctionsFromFS, transformHandlers } from "./ro
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
+import { defaultConfig } from "./config.ts";
 
 interface OctopussOptions {
 	routesDir?: string;
@@ -19,10 +20,6 @@ interface StartServerOptions {
 	serve?: Deno.ServeOptions | Deno.ServeTlsOptions;
 	octo?: OctopussOptions;
 	handlers?: Record<`/${string}`, StaticHandler>;
-};
-
-const defaultConfig = {
-	routesDir: 'functions'
 };
 
 export const startServer = async (opts?: StartServerOptions) => {
