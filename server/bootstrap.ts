@@ -1,6 +1,6 @@
 import { startServer } from "./middleware.ts";
 
-startServer({
+await startServer({
 	serve: {
 		port: 8080
 	},
@@ -8,3 +8,5 @@ startServer({
 		routesDir: 'src/routes'
 	}
 });
+
+console.log('%cStartup done', 'color: green');
