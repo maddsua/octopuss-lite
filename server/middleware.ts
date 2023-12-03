@@ -23,7 +23,7 @@ interface StartServerOptions {
 
 export const startServer = async (opts?: StartServerOptions) => {
 
-	const searchDir = opts?.octo?.routesDir || 'src/routes';
+	const searchDir = opts?.octo?.routesDir || 'functions';
 
 	console.log(`\n%c Indexing functions in ${searchDir}... \n`, 'background-color: green; color: black');
 
