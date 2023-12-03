@@ -1,5 +1,5 @@
 import type { JSONResponse } from "./api.ts";
-import { ServiceConsole } from "./console.ts";
+import type { ServiceConsole } from "./console.ts";
 
 export interface RouteChecksControl {
 	origin?: boolean;

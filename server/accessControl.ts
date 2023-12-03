@@ -1,22 +1,52 @@
 
+export class OriginChecker {
+
+	allowedOrigins: string[];
+
+	constructor(origins: string[]) {
+		this.allowedOrigins = origins;
+	}
+
+	check(rqOrigin: string) {
+
+		if (!rqOrigin) return false;
+
+		let hostnameStart = rqOrigin.indexOf("://");
+		if (hostnameStart === -1) return false;
+		hostnameStart += 3;
+		
+		const portStart = rqOrigin.indexOf(':', hostnameStart);
+		const pathStart = rqOrigin.indexOf('/', hostnameStart);
+		
+		let hostnameEnd = undefined;
+
+		if (portStart !== -1) {
+			hostnameEnd = portStart;
+		} else if (pathStart !== -1) {
+			hostnameEnd = pathStart;
+		}
+
+		const originHostname = rqOrigin.slice(hostnameStart, hostnameEnd);
+
+		return this.allowedOrigins.some(domain => (
+			originHostname === domain ||
+			originHostname.endsWith(`.${domain}`)
+		));
+	}
+};
+
+
 export interface RateLimiterConfig {
 	period: number,
 	requests: number
 };
-
-interface ActivityData {
-	total: number;
-	last: number;
-};
-
-interface CheckRateProps {
-	ip: string;
-};
-
 export class RateLimiter {
 
 	config: RateLimiterConfig;
-	activity: Map<string, ActivityData>;
+	activity: Map<string, {
+		total: number;
+		last: number;
+	}>;
 
 	static defaultConfig: RateLimiterConfig = {
 		period: 3600,
@@ -37,11 +67,13 @@ export class RateLimiter {
 		}
 	}
 
-	check(props: CheckRateProps) {
+	check(options: {
+		ip: string;
+	}) {
 
-		const clientActivity = this.activity.get(props.ip);
+		const clientActivity = this.activity.get(options.ip);
 		if (!clientActivity) {
-			this.activity.set(props.ip, {
+			this.activity.set(options.ip, {
 				total: 1,
 				last: new Date().getTime()
 			});
@@ -60,7 +92,7 @@ export class RateLimiter {
 
 		if (timeDelta >= this.config.period) {
 			if (clientActivity.total > 0)
-			this.activity.delete(props.ip);
+			this.activity.delete(options.ip);
 			return {
 				ok: true,
 				requests: clientActivity.total,
@@ -82,4 +114,4 @@ export class RateLimiter {
 			reset: resetTime
 		};
 	}
-}
+};

@@ -1,7 +1,6 @@
-import { findAllRoutes, loadRoutes } from "./routes.ts";
+import { findAllRoutes, loadRoutes } from "./moduleLoader.ts";
 import { JSONResponse } from "./api.ts";
-import { OriginChecker } from "./originManager.ts";
-import { RateLimiter, type RateLimiterConfig } from "./rateLimiter.ts";
+import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
 
 interface OctopussOptions {
