@@ -1,4 +1,4 @@
-import { findAllRoutes, loadRoutes } from "./moduleLoader.ts";
+import { findAllRoutes, loadRoutes } from "./routeHandlers.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
