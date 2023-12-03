@@ -29,8 +29,8 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const routesPool = await loadRoutes(handlers);
 
-	const rateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
-	const originChecker: OriginChecker | null = opts?.octo?.allowOrigings?.length ? new OriginChecker(opts.octo.allowOrigings) : null;
+	const globalRateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
+	const globalOriginChecker: OriginChecker | null = opts?.octo?.allowOrigings?.length ? new OriginChecker(opts.octo.allowOrigings) : null;
 
 	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
 
@@ -48,7 +48,33 @@ export const startServer = async (opts?: StartServerOptions) => {
 			const { pathname, search } = new URL(request.url);
 			requestDisplayUrl = pathname + search;
 
+			// find route function
+			let routectx = routesPool[pathname];
+
+			// match route function
+			if (!routectx) {
+				const pathComponents = pathname.slice(1).split('/');
+				for (let idx = pathComponents.length - 1; idx >= 0; idx--) {
+	
+					const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
+					const nextCtx = routesPool[nextRoute];
+	
+					if (nextCtx?.url.expand) {
+						routectx = nextCtx;
+						break;
+					}
+				}
+			}
+	
+			//	go cry in the corned if it's not found
+			if (!routectx) {
+				return new JSONResponse({
+					error_text: 'route not found'
+				}, { status: 404 }).toResponse();
+			}
+
 			//	check request origin
+			const originChecker = typeof routectx.originChecker !== 'undefined' ? (routectx.originChecker || globalOriginChecker) : null;
 			if (originChecker) {
 				if (!requestOrigin) {
 					return new JSONResponse({
@@ -63,6 +89,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 
 			//	check rate limiter
+			const rateLimiter = typeof routectx.rateLimiter !== 'undefined' ? (routectx.rateLimiter || globalRateLimiter) : null;
 			if (rateLimiter) {
 				const rateCheck = rateLimiter.check({ ip: requestIP });
 				if (!rateCheck.ok) {
@@ -95,31 +122,6 @@ export const startServer = async (opts?: StartServerOptions) => {
 						'Access-Control-Allow-Credentials': 'true'
 					}
 				}).toResponse();
-			}
-
-			// find route function
-			let routectx = routesPool[pathname];
-			
-			// match route function
-			if (!routectx) {
-				const pathComponents = pathname.slice(1).split('/');
-				for (let idx = pathComponents.length - 1; idx >= 0; idx--) {
-	
-					const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
-					const nextCtx = routesPool[nextRoute];
-	
-					if (nextCtx?.url.expand) {
-						routectx = nextCtx;
-						break;
-					}
-				}
-			}
-	
-			//	go cry in the corned if it's not found
-			if (!routectx) {
-				return new JSONResponse({
-					error_text: 'route not found'
-				}, { status: 404 }).toResponse();
 			}
 
 			//	expose request id
