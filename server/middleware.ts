@@ -1,4 +1,4 @@
-import { type StaticHandler, loadFunctionsFromFS } from "./routeHandlers.ts";
+import { type StaticHandler, loadFunctionsFromFS, transformHandlers } from "./routeHandlers.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
@@ -18,7 +18,7 @@ interface OctopussOptions {
 interface StartServerOptions {
 	serve?: Deno.ServeOptions | Deno.ServeTlsOptions;
 	octo?: OctopussOptions;
-	handlers?: Record<string, StaticHandler>;
+	handlers?: Record<`/${string}`, StaticHandler>;
 };
 
 export const startServer = async (opts?: StartServerOptions) => {
@@ -27,7 +27,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	console.log(`\n%c Indexing functions in ${searchDir}... \n`, 'background-color: green; color: black');
 
-	const routesPool = await loadFunctionsFromFS(searchDir);
+	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
 
 	const globalRateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
 	const globalOriginChecker: OriginChecker | null = opts?.octo?.allowedOrigings?.length ? new OriginChecker(opts.octo.allowedOrigings) : null;
