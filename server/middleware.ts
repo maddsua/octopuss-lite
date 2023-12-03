@@ -74,7 +74,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 
 			//	check request origin
-			const originChecker = typeof routectx.originChecker !== 'undefined' ? (routectx.originChecker || globalOriginChecker) : null;
+			const originChecker = routectx.originChecker !== null ? (routectx.originChecker || globalOriginChecker) : null;
 			if (originChecker) {
 				if (!requestOrigin) {
 					return new JSONResponse({
@@ -89,7 +89,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 
 			//	check rate limiter
-			const rateLimiter = typeof routectx.rateLimiter !== 'undefined' ? (routectx.rateLimiter || globalRateLimiter) : null;
+			const rateLimiter = routectx.rateLimiter !== null ? (routectx.rateLimiter || globalRateLimiter) : null;
 			if (rateLimiter) {
 				const rateCheck = rateLimiter.check({ ip: requestIP });
 				if (!rateCheck.ok) {
