@@ -11,7 +11,7 @@ interface OctopussOptions {
 	},
 	rateLimit?: RateLimiterConfig;
 	handleCORS?: boolean;
-	allowOrigings?: string[];
+	allowedOrigings?: string[];
 	exposeRequestID?: boolean;
 };
 
@@ -30,7 +30,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 	const routesPool = await loadRoutes(handlers);
 
 	const globalRateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
-	const globalOriginChecker: OriginChecker | null = opts?.octo?.allowOrigings?.length ? new OriginChecker(opts.octo.allowOrigings) : null;
+	const globalOriginChecker: OriginChecker | null = opts?.octo?.allowedOrigings?.length ? new OriginChecker(opts.octo.allowedOrigings) : null;
 
 	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
 
