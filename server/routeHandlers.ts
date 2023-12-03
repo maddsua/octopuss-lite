@@ -39,7 +39,7 @@ type HandlersPool = Record<string, RouteCtx>;
 
 export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool> => {
 
-	const entries: string[] = [];
+	const allEntries: string[] = [];
 
 	const iterateDirectory = async (dir: string) => {
 		const nextEntries = Deno.readDir(dir);
@@ -48,17 +48,18 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool
 			if (item.isDirectory) {
 				await iterateDirectory(itemPath);
 			} else if (item.isFile) {
-				entries.push(itemPath);
+				allEntries.push(itemPath);
 			}
 		}
 	};
 	await iterateDirectory(fromDir);
 
-	if (!entries.length) throw new Error(`Failed to load route functions: no modules found in "${fromDir}"`);
+	const importEntries = allEntries.filter(item => ['ts', 'mts', 'js', 'mjs'].some(ext => item.endsWith(`.${ext}`)));
+	if (!importEntries.length) throw new Error(`Failed to load route functions: no modules found in "${fromDir}"`);
 
 	const result: Record<string, RouteCtx> = {};
 
-	for (const entry of entries) {
+	for (const entry of importEntries) {
 
 		try {
 
@@ -99,7 +100,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool
 		}
 	}
 
-	console.log(`%cLoaded ${entries.length} functions`, 'color: green')
+	console.log(`%cLoaded ${allEntries.length} functions`, 'color: green')
 
 	return result;
 };
