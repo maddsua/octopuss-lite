@@ -34,9 +34,18 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
 
+		const requestID = (opts?.octo?.proxy?.requestIdHeader ?
+			request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) ||
+			Array.apply(null, Array(8)).map(() => {
+				const characters = 'abcdefghijklmnopqrstuvwxyz0123456789'
+				characters.charAt(Math.floor(Math.random() * characters.length))
+			}).join('');
+
+		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ?
+			request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) ||
+			info.remoteAddr.hostname;
+
 		const requestOrigin = request.headers.get('origin');
-		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ? request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) || info.remoteAddr.hostname;
-		const requestID = (opts?.octo?.proxy?.requestIdHeader ? request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) || 'test';
 		let allowedOrigin: string | null = null;
 		let exposeRequestID = false;
 		let requestDisplayUrl = '/';
