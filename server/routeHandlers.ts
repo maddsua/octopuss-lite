@@ -20,7 +20,8 @@ export type RouteHandler = (request: Request, context: Context) => Promise<Route
 
 export interface StaticHandler {
 	handler: RouteHandler;
-	config?: RouteConfig;
+	path: string;
+	config?: Omit<RouteConfig, 'url'>;
 };
 
 export interface RouteCtx {
@@ -61,6 +62,11 @@ export const findAllRoutes = async (routesDir: string): Promise<RouteSearchResul
 	};
 };
 
+export const applyConfig = (config: RouteConfig): Partial<RouteCtx> => ({
+	rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
+	originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
+});
+
 export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string, RouteCtx>> => {
 
 	const result: Record<string, RouteCtx> = {};
@@ -90,16 +96,19 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 			const pathname = typeof customUrl === 'string' ? customUrl : fsRoutedUrl;
 			if (!pathname.startsWith('/')) throw new Error(`Invalid route url: ${pathname}`);
 
-			result[pathname] = {
+			const expandPathByUrl = config.url?.endsWith('*');
+			const expandFlagProvided = typeof config.expand === 'boolean';
+			if (expandPathByUrl && expandFlagProvided) {
+				console.warn(`Module %c"${entry}"%c has both expanding path and %cconfig.expand%c set, the last will be used`, 'color: yellow', 'color: inherit', 'color: yellow', 'color: inherit');
+			}
+
+			result[pathname] = Object.assign({
 				handler,
 				url: {
 					pathname,
-					expand: typeof config.expand === 'boolean' ? config.expand : (config.url?.endsWith('*') || false)
-					//	big todo: add warning for a case when both bool val and url with asterist are set
-				},
-				rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
-				originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
-			} satisfies RouteCtx;
+					expand: expandFlagProvided ? config.expand : (expandPathByUrl || false)
+				}
+			}, applyConfig(config));
 
 		} catch (error) {
 			throw new Error(`Failed to import route module ${entry}: ${(error as Error).message}`);
