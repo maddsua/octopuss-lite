@@ -21,9 +21,13 @@ interface StartServerOptions {
 	handlers?: Record<`/${string}`, StaticHandler>;
 };
 
+const defaultConfig = {
+	routesDir: 'functions'
+};
+
 export const startServer = async (opts?: StartServerOptions) => {
 
-	const searchDir = opts?.octo?.routesDir || 'src/routes';
+	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
 
 	console.log(`\n%c Indexing functions in ${searchDir}... \n`, 'background-color: green; color: black');
 
@@ -38,7 +42,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) ||
 			Array.apply(null, Array(8)).map(() => {
 				const characters = 'abcdefghijklmnopqrstuvwxyz0123456789'
-				characters.charAt(Math.floor(Math.random() * characters.length))
+				return characters.charAt(Math.floor(Math.random() * characters.length))
 			}).join('');
 
 		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ?
