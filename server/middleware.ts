@@ -13,6 +13,7 @@ interface OctopussOptions {
 	rateLimit?: RateLimiterConfig;
 	handleCORS?: boolean;
 	allowOrigings?: string[];
+	exposeRequestID?: boolean;
 };
 
 interface StartServerOptions {
@@ -38,6 +39,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ? request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) || info.remoteAddr.hostname;
 		const requestID = (opts?.octo?.proxy?.requestIdHeader ? request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) || 'test';
 		let allowedOrigin: string | null = null;
+		let exposeRequestID = false;
 		let requestDisplayUrl = '/';
 
 		const console = new ServiceConsole(requestID);
@@ -121,6 +123,9 @@ export const startServer = async (opts?: StartServerOptions) => {
 				}, { status: 404 }).toResponse();
 			}
 
+			//	expose request id
+			if (opts?.octo?.exposeRequestID) exposeRequestID = true;
+
 			//	execute route function
 			try {
 				const handlerResponse = await routectx.handler(request, { console, requestID, requestIP });
@@ -137,6 +142,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 		//	add some headers so the shit always works
 		middleware.headers.set('x-powered-by', 'octopuss');
 		if (allowedOrigin) middleware.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+		if (exposeRequestID) middleware.headers.set('x-request-id', requestID);
 
 		//	log for, you know, reasons
 		console.log(`(${requestIP}) ${request.method} "${requestDisplayUrl}" --> ${middleware.status}`);
