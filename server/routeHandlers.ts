@@ -2,6 +2,12 @@ import { OriginChecker, RateLimiter, RateLimiterConfig } from "./accessControl.t
 import type { JSONResponse } from "./api.ts";
 import type { ServiceConsole } from "./console.ts";
 
+export interface Context {
+	console: ServiceConsole;
+	requestIP: string;
+	requestID: string | null;
+};
+
 export interface RouteConfig {
 	expand?: boolean;
 	url?: string;
@@ -9,58 +15,50 @@ export interface RouteConfig {
 	allowedOrigings?: string[] | false;
 };
 
-export interface Context {
-	console: ServiceConsole;
-	requestIP: string;
-	requestID: string | null;
-};
-
 export type RouteResponse = JSONResponse<object> | Response;
 export type RouteHandler = (request: Request, context: Context) => Promise<RouteResponse> | RouteResponse;
 
+export interface StaticHandler {
+	handler: RouteHandler;
+	config?: Omit<RouteConfig, 'url'>;
+};
+
 export interface RouteCtx {
-	url: {
-		pathname: string;
-		expand: boolean;
-	};
+	expandPath: boolean;
 	rateLimiter?: RateLimiter | null;
 	originChecker?: OriginChecker | null;
 	handler: RouteHandler;
 };
 
-interface RouteSearchResult {
-	routesDir: string;
-	entries: string[];
-};
+export const applyConfig = (config: RouteConfig): Partial<RouteCtx> => ({
+	rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
+	originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
+});
 
-export const findAllRoutes = async (routesDir: string): Promise<RouteSearchResult> => {
+type HandlersPool = Record<string, RouteCtx>;
+
+export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool> => {
 
 	const entries: string[] = [];
 
-	const iterate = async (dir: string) => {
+	const iterateDirectory = async (dir: string) => {
 		const nextEntries = Deno.readDir(dir);
 		for await (const item of nextEntries) {
 			const itemPath = `${dir}/${item.name}`;
 			if (item.isDirectory) {
-				await iterate(itemPath);
+				await iterateDirectory(itemPath);
 			} else if (item.isFile) {
 				entries.push(itemPath);
 			}
 		}
 	};
-	await iterate(routesDir);
+	await iterateDirectory(fromDir);
 
-	return {
-		routesDir,
-		entries: entries.filter(item => ['js', 'mjs', 'ts', 'mts'].some(ext => item.endsWith(`.${ext}`)))
-	};
-};
-
-export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string, RouteCtx>> => {
+	if (!entries.length) throw new Error(`Failed to load route functions: no modules found in "${fromDir}"`);
 
 	const result: Record<string, RouteCtx> = {};
 
-	for (const entry of from.entries) {
+	for (const entry of entries) {
 
 		try {
 
@@ -77,7 +75,7 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 			const config = (imported['config'] || {}) as RouteConfig;
 			if (typeof config !== 'object') throw new Error('Config invalid');
 
-			const pathNoExt = entry.slice(from.routesDir.length, entry.lastIndexOf('.'));
+			const pathNoExt = entry.slice(fromDir.length, entry.lastIndexOf('.'));
 			const indexIndex = pathNoExt.lastIndexOf('/index');
 			const fsRoutedUrl = indexIndex === -1 ? pathNoExt : (indexIndex === 0 ? '/' : pathNoExt.slice(0, indexIndex));
 			const customUrl = config.url?.replace(/[\/\*]+$/, '');
@@ -85,23 +83,32 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 			const pathname = typeof customUrl === 'string' ? customUrl : fsRoutedUrl;
 			if (!pathname.startsWith('/')) throw new Error(`Invalid route url: ${pathname}`);
 
-			result[pathname] = {
+			const expandPathByUrl = config.url?.endsWith('/*');
+			const expandFlagProvided = typeof config.expand === 'boolean';
+			if (expandPathByUrl && expandFlagProvided) {
+				console.warn(`Module %c"${entry}"%c has both expanding path and %cconfig.expand%c set, the last will be used`, 'color: yellow', 'color: inherit', 'color: yellow', 'color: inherit');
+			}
+
+			result[pathname] = Object.assign({
 				handler,
-				url: {
-					pathname,
-					expand: typeof config.expand === 'boolean' ? config.expand : (config.url?.endsWith('*') || false)
-					//	big todo: add warning for a case when both bool val and url with asterist are set
-				},
-				rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
-				originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
-			} satisfies RouteCtx;
+				expandPath: expandFlagProvided ? (config.expand as boolean) : (expandPathByUrl || false)
+			}, applyConfig(config));
 
 		} catch (error) {
 			throw new Error(`Failed to import route module ${entry}: ${(error as Error).message}`);
 		}
 	}
 
-	console.log(`%cLoaded ${from.entries.length} functions`, 'color: green')
+	console.log(`%cLoaded ${entries.length} functions`, 'color: green')
 
 	return result;
+};
+
+export const transformHandlers = (functions: Record<string, StaticHandler>): HandlersPool => {
+	return Object.fromEntries(Object.entries(functions).map(([key, value]) => {
+		return [key, Object.assign({
+			handler: value.handler,
+			expandPath: key.endsWith('/*')
+		}, applyConfig(value.config || {}))]
+	}));
 };
