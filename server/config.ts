@@ -1,13 +1,11 @@
-import { RateLimiterConfig } from "./accessControl.ts";
 
-interface OctopussConfig {
-	routesDir: string;
-	proxy?: {
-		forwardedIPHeader?: string;
-		requestIdHeader?: string;
-	},
-	rateLimit?: RateLimiterConfig;
-	handleCORS: boolean;
-	allowedOrigings?: string[];
-	exposeRequestID: boolean;
-}
+export const defaultConfig = {
+	routesDir: 'functions'
+};
+
+export const importFileExtensions = [
+	'ts',
+	'mts',
+	'js',
+	'mjs'
+];
