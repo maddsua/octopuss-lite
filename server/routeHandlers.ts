@@ -34,12 +34,12 @@ export interface RouteCtx {
 	handler: RouteHandler;
 };
 
-interface RouteSearchResult {
-	routesDir: string;
-	entries: string[];
-};
+export const applyConfig = (config: RouteConfig): Partial<RouteCtx> => ({
+	rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
+	originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
+});
 
-export const findAllRoutes = async (routesDir: string): Promise<RouteSearchResult> => {
+export const loadFunctionsFromFS = async (fromDir: string): Promise<Record<string, RouteCtx>> => {
 
 	const entries: string[] = [];
 
@@ -54,24 +54,13 @@ export const findAllRoutes = async (routesDir: string): Promise<RouteSearchResul
 			}
 		}
 	};
-	await iterate(routesDir);
+	await iterate(fromDir);
 
-	return {
-		routesDir,
-		entries: entries.filter(item => ['js', 'mjs', 'ts', 'mts'].some(ext => item.endsWith(`.${ext}`)))
-	};
-};
-
-export const applyConfig = (config: RouteConfig): Partial<RouteCtx> => ({
-	rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
-	originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
-});
-
-export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string, RouteCtx>> => {
+	if (!entries.length) throw new Error(`Failed to load route functions: no modules found in "${fromDir}"`);
 
 	const result: Record<string, RouteCtx> = {};
 
-	for (const entry of from.entries) {
+	for (const entry of entries) {
 
 		try {
 
@@ -88,7 +77,7 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 			const config = (imported['config'] || {}) as RouteConfig;
 			if (typeof config !== 'object') throw new Error('Config invalid');
 
-			const pathNoExt = entry.slice(from.routesDir.length, entry.lastIndexOf('.'));
+			const pathNoExt = entry.slice(fromDir.length, entry.lastIndexOf('.'));
 			const indexIndex = pathNoExt.lastIndexOf('/index');
 			const fsRoutedUrl = indexIndex === -1 ? pathNoExt : (indexIndex === 0 ? '/' : pathNoExt.slice(0, indexIndex));
 			const customUrl = config.url?.replace(/[\/\*]+$/, '');
@@ -115,7 +104,11 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 		}
 	}
 
-	console.log(`%cLoaded ${from.entries.length} functions`, 'color: green')
+	console.log(`%cLoaded ${entries.length} functions`, 'color: green')
 
 	return result;
+};
+
+export const transformProvidedFunctions = async (functions: Record<string, StaticHandler>) => {
+
 };
