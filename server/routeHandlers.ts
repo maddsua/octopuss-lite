@@ -104,7 +104,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool
 	return result;
 };
 
-export const transformProvidedFunctions = async (functions: Record<string, StaticHandler>): Promise<HandlersPool> => {
+export const transformHandlers = (functions: Record<string, StaticHandler>): HandlersPool => {
 	return Object.fromEntries(Object.entries(functions).map(([key, value]) => {
 		return [key, Object.assign({
 			handler: value.handler,
