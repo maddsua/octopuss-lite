@@ -21,9 +21,13 @@ interface StartServerOptions {
 	handlers?: Record<`/${string}`, StaticHandler>;
 };
 
+const defaultConfig = {
+	routesDir: 'functions'
+};
+
 export const startServer = async (opts?: StartServerOptions) => {
 
-	const searchDir = opts?.octo?.routesDir || 'functions';
+	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
 
 	console.log(`\n%c Indexing functions in ${searchDir}... \n`, 'background-color: green; color: black');
 
