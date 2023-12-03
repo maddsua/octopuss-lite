@@ -6,7 +6,7 @@ export interface RouteConfig {
 	expand?: boolean;
 	url?: string;
 	ratelimit?: RateLimiterConfig | false;
-	origins?: string[] | false;
+	allowedOrigings?: string[] | false;
 };
 
 export interface Context {
@@ -91,7 +91,7 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 					//	big todo: add warning for a case when both bool val and url with asterist are set
 				},
 				rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
-				originChecker: config.origins === false ? null :(config.origins?.length ? new OriginChecker(config.origins) : undefined)
+				originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
 			} satisfies RouteCtx;
 
 		} catch (error) {
