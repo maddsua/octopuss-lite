@@ -9,10 +9,10 @@ const smartParseInt = (variable: string | null | undefined): number | undefined 
 
 await startServer({
 	serve: {
-		port: smartParseInt(Deno.env.get('PORT')) || 8080,
-		hostname: Deno.env.get('HOSTNAME'),
-		cert: Deno.env.get('TLS_CERT'),
-		key: Deno.env.get('TLS_KEY')
+		port: smartParseInt(Deno.env.get('OCTO_PORT') || Deno.env.get('PORT')) || 8080,
+		hostname: Deno.env.get('OCTO_HOSTNAME'),
+		cert: Deno.env.get('OCTO_TLS_CERT'),
+		key: Deno.env.get('OCTO_TLS_KEY')
 	},
 	octo: {
 		routesDir: 'src/routes'
