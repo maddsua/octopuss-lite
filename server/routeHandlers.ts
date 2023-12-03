@@ -20,15 +20,11 @@ export type RouteHandler = (request: Request, context: Context) => Promise<Route
 
 export interface StaticHandler {
 	handler: RouteHandler;
-	path: string;
 	config?: Omit<RouteConfig, 'url'>;
 };
 
 export interface RouteCtx {
-	url: {
-		pathname: string;
-		expand: boolean;
-	};
+	expandPath: boolean;
 	rateLimiter?: RateLimiter | null;
 	originChecker?: OriginChecker | null;
 	handler: RouteHandler;
@@ -39,7 +35,9 @@ export const applyConfig = (config: RouteConfig): Partial<RouteCtx> => ({
 	originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
 });
 
-export const loadFunctionsFromFS = async (fromDir: string): Promise<Record<string, RouteCtx>> => {
+type HandlersPool = Record<string, RouteCtx>;
+
+export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool> => {
 
 	const entries: string[] = [];
 
@@ -85,7 +83,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<Record<strin
 			const pathname = typeof customUrl === 'string' ? customUrl : fsRoutedUrl;
 			if (!pathname.startsWith('/')) throw new Error(`Invalid route url: ${pathname}`);
 
-			const expandPathByUrl = config.url?.endsWith('*');
+			const expandPathByUrl = config.url?.endsWith('/*');
 			const expandFlagProvided = typeof config.expand === 'boolean';
 			if (expandPathByUrl && expandFlagProvided) {
 				console.warn(`Module %c"${entry}"%c has both expanding path and %cconfig.expand%c set, the last will be used`, 'color: yellow', 'color: inherit', 'color: yellow', 'color: inherit');
@@ -93,10 +91,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<Record<strin
 
 			result[pathname] = Object.assign({
 				handler,
-				url: {
-					pathname,
-					expand: expandFlagProvided ? config.expand : (expandPathByUrl || false)
-				}
+				expandPath: expandFlagProvided ? (config.expand as boolean) : (expandPathByUrl || false)
 			}, applyConfig(config));
 
 		} catch (error) {
@@ -109,6 +104,11 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<Record<strin
 	return result;
 };
 
-export const transformProvidedFunctions = async (functions: Record<string, StaticHandler>) => {
-
+export const transformProvidedFunctions = async (functions: Record<string, StaticHandler>): Promise<HandlersPool> => {
+	return Object.fromEntries(Object.entries(functions).map(([key, value]) => {
+		return [key, Object.assign({
+			handler: value.handler,
+			expandPath: key.endsWith('/*')
+		}, applyConfig(value.config || {}))]
+	}));
 };
