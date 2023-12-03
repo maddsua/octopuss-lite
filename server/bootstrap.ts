@@ -15,7 +15,7 @@ await startServer({
 		key: Deno.env.get('OCTO_TLS_KEY')
 	},
 	octo: {
-		routesDir: Deno.env.get('OCTO_ROUTES_DIR') || 'src/routes',
+		routesDir: Deno.env.get('OCTO_ROUTES_DIR'),
 		handleCORS: Deno.env.get('OCTO_HANDLE_CORS') !== 'false',
 		allowedOrigings: Deno.env.get('OCTO_ALLOWED_ORIGINS')?.split(',').map(item => item.trim()),
 		rateLimit: {
