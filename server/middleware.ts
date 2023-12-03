@@ -4,12 +4,12 @@ import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessCont
 import { ServiceConsole } from "./console.ts";
 
 interface OctopussOptions {
-	routesDir: string;
+	routesDir?: string;
 	proxy?: {
 		forwardedIPHeader?: string;
 		requestIdHeader?: string;
 	},
-	rateLimit?: RateLimiterConfig;
+	rateLimit?: Partial<RateLimiterConfig>;
 	handleCORS?: boolean;
 	allowedOrigings?: string[];
 	exposeRequestID?: boolean;
