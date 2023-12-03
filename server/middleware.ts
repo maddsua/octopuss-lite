@@ -25,7 +25,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const searchDir = opts?.octo?.routesDir || 'src/routes';
 
-	console.log(`%cIndexing functions in ${searchDir}...`, 'color: yellow');
+	console.log(`\n%c Indexing functions in ${searchDir}... \n`, 'background-color: green; color: black');
 
 	const handlers = await findAllRoutes(searchDir);
 	if (!handlers.entries.length) throw new Error(`Failed to load route functions: no modules found in "${searchDir}"`);
