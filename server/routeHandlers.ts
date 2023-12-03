@@ -61,13 +61,15 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 	const result: Record<string, RouteCtx> = {};
 
 	await Promise.all(from.entries.map(async item => {
+
 		try {
 
-			const importPath = `file:///${Deno.cwd()}/${item}`;
+			const importPath = /^([A-z]\:)?[\\\/]/.test(item) ? item : `${Deno.cwd()}/${item}`;
+			const importURL = `file:///` + importPath.replace(/[\\\/]+/g, '/').replace(/\/[^\/]+\/[\.]{2}\//g, '/').replace(/\/\.\//g, '/');
 
-			console.log(importPath);
+			console.log(`%c --> Loading module %c${item}\n\t (resolved: ${importURL})`, 'color: blue', 'color: white');
 
-			const imported = await import(importPath);
+			const imported = await import(importURL);	
 	
 			const handler = (imported['default'] || imported['handler']);
 			if (!handler || typeof handler !== 'function') throw new Error('No handler exported');
@@ -97,6 +99,7 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 		} catch (error) {
 			throw new Error(`Failed to import route module ${item}: ${(error as Error).message}`);
 		}
+
 	}));
 
 	return result;
