@@ -43,18 +43,18 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<Record<strin
 
 	const entries: string[] = [];
 
-	const iterate = async (dir: string) => {
+	const iterateDirectory = async (dir: string) => {
 		const nextEntries = Deno.readDir(dir);
 		for await (const item of nextEntries) {
 			const itemPath = `${dir}/${item.name}`;
 			if (item.isDirectory) {
-				await iterate(itemPath);
+				await iterateDirectory(itemPath);
 			} else if (item.isFile) {
 				entries.push(itemPath);
 			}
 		}
 	};
-	await iterate(fromDir);
+	await iterateDirectory(fromDir);
 
 	if (!entries.length) throw new Error(`Failed to load route functions: no modules found in "${fromDir}"`);
 
