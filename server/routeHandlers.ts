@@ -2,6 +2,12 @@ import { OriginChecker, RateLimiter, RateLimiterConfig } from "./accessControl.t
 import type { JSONResponse } from "./api.ts";
 import type { ServiceConsole } from "./console.ts";
 
+export interface Context {
+	console: ServiceConsole;
+	requestIP: string;
+	requestID: string | null;
+};
+
 export interface RouteConfig {
 	expand?: boolean;
 	url?: string;
@@ -9,14 +15,13 @@ export interface RouteConfig {
 	allowedOrigings?: string[] | false;
 };
 
-export interface Context {
-	console: ServiceConsole;
-	requestIP: string;
-	requestID: string | null;
-};
-
 export type RouteResponse = JSONResponse<object> | Response;
 export type RouteHandler = (request: Request, context: Context) => Promise<RouteResponse> | RouteResponse;
+
+export interface StaticHandler {
+	handler: RouteHandler;
+	config?: RouteConfig;
+};
 
 export interface RouteCtx {
 	url: {
