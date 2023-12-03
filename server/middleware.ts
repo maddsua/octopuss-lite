@@ -1,15 +1,15 @@
-import { findAllRoutes, loadRoutes } from "./routeHandlers.ts";
+import { type StaticHandler, loadFunctionsFromFS, transformHandlers } from "./routeHandlers.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
 
 interface OctopussOptions {
-	routesDir: string;
+	routesDir?: string;
 	proxy?: {
 		forwardedIPHeader?: string;
 		requestIdHeader?: string;
 	},
-	rateLimit?: RateLimiterConfig;
+	rateLimit?: Partial<RateLimiterConfig>;
 	handleCORS?: boolean;
 	allowedOrigings?: string[];
 	exposeRequestID?: boolean;
@@ -18,27 +18,34 @@ interface OctopussOptions {
 interface StartServerOptions {
 	serve?: Deno.ServeOptions | Deno.ServeTlsOptions;
 	octo?: OctopussOptions;
+	handlers?: Record<`/${string}`, StaticHandler>;
 };
 
 export const startServer = async (opts?: StartServerOptions) => {
 
 	const searchDir = opts?.octo?.routesDir || 'src/routes';
 
-	console.log(`%cIndexing functions in ${searchDir}...`, 'color: yellow');
+	console.log(`\n%c Indexing functions in ${searchDir}... \n`, 'background-color: green; color: black');
 
-	const handlers = await findAllRoutes(searchDir);
-	if (!handlers.entries.length) throw new Error(`Failed to load route functions: no modules found in "${searchDir}"`);
-
-	const routesPool = await loadRoutes(handlers);
+	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
 
 	const globalRateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
 	const globalOriginChecker: OriginChecker | null = opts?.octo?.allowedOrigings?.length ? new OriginChecker(opts.octo.allowedOrigings) : null;
 
 	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
 
+		const requestID = (opts?.octo?.proxy?.requestIdHeader ?
+			request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) ||
+			Array.apply(null, Array(8)).map(() => {
+				const characters = 'abcdefghijklmnopqrstuvwxyz0123456789'
+				characters.charAt(Math.floor(Math.random() * characters.length))
+			}).join('');
+
+		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ?
+			request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) ||
+			info.remoteAddr.hostname;
+
 		const requestOrigin = request.headers.get('origin');
-		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ? request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) || info.remoteAddr.hostname;
-		const requestID = (opts?.octo?.proxy?.requestIdHeader ? request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) || 'test';
 		let allowedOrigin: string | null = null;
 		let exposeRequestID = false;
 		let requestDisplayUrl = '/';
@@ -61,7 +68,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 					const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
 					const nextCtx = routesPool[nextRoute];
 	
-					if (nextCtx?.url.expand) {
+					if (nextCtx?.expandPath) {
 						routectx = nextCtx;
 						break;
 					}
@@ -117,8 +124,6 @@ export const startServer = async (opts?: StartServerOptions) => {
 					status: 204,
 					headers: {
 						'Access-Control-Allow-Methods': requestedCorsMethod || defaultCorsMethods,
-						//'Access-Control-Allow-Origin': allowedOrigin,
-						//	this one is gonna be appended later
 						'Access-Control-Allow-Headers': requestedCorsHeaders || defaultCorsHeaders,
 						'Access-Control-Max-Age': '3600',
 						'Access-Control-Allow-Credentials': 'true'
