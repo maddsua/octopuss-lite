@@ -1,4 +1,4 @@
-import { RouteConfig } from "../../server/routeHandlers.ts";
+import { RouteConfig } from "../../../server/routeHandlers.ts";
 
 export const config: RouteConfig = {
 	expand: true

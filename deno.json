@@ -1,5 +1,6 @@
 {
 	"tasks": {
-		"start": "deno run --allow-all server/bootstrap.ts"
+		"start": "deno run --allow-all server/bootstrap.ts",
+		"test": "deno run --allow-all test/start.ts"
 	}
 }
