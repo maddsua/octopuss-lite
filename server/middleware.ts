@@ -115,8 +115,6 @@ export const startServer = async (opts?: StartServerOptions) => {
 					status: 204,
 					headers: {
 						'Access-Control-Allow-Methods': requestedCorsMethod || defaultCorsMethods,
-						//'Access-Control-Allow-Origin': allowedOrigin,
-						//	this one is gonna be appended later
 						'Access-Control-Allow-Headers': requestedCorsHeaders || defaultCorsHeaders,
 						'Access-Control-Max-Age': '3600',
 						'Access-Control-Allow-Credentials': 'true'
