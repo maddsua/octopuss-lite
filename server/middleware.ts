@@ -9,7 +9,7 @@ interface OctopussOptions {
 		forwardedIPHeader?: string;
 		requestIdHeader?: string;
 	},
-	rateLimit?: RateLimiterConfig;
+	rateLimit?: Partial<RateLimiterConfig>;
 	handleCORS?: boolean;
 	allowedOrigings?: string[];
 	exposeRequestID?: boolean;
