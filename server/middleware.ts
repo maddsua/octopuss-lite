@@ -29,8 +29,6 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
 
-	console.log(routesPool);
-
 	const globalRateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
 	const globalOriginChecker: OriginChecker | null = opts?.octo?.allowedOrigings?.length ? new OriginChecker(opts.octo.allowedOrigings) : null;
 
