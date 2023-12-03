@@ -10,6 +10,23 @@ export default () => <>
 			<p>
 				Yeah coool af
 			</p>
+			<div>
+				<p>More pages:</p>
+				<ul>
+					<li>
+						<a href="/test">/test</a>
+					</li>
+					<li>
+						<a href="/api">/api</a>
+					</li>
+					<li>
+						<a href="/nested">/nested</a>
+					</li>
+					<li>
+						<a href="/nested/named">/nested/named</a>
+					</li>
+				</ul>
+			</div>
 		</body>
 	</html>
 </>;
