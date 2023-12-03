@@ -1,5 +1,5 @@
 {
 	"tasks": {
-		"start": "deno run --allow-all index.ts"
+		"start": "deno run --allow-all server/bootstrap.ts"
 	}
 }
