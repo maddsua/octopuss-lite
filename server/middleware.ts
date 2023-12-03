@@ -136,9 +136,11 @@ export const startServer = async (opts?: StartServerOptions) => {
 			//	execute route function
 			try {
 				const handlerResponse = await routectx.handler(request, { console, requestID, requestIP });
-				if (!(handlerResponse instanceof Response) && !(handlerResponse instanceof JSONResponse))
-					throw new Error('Invalid function response');
-				return handlerResponse instanceof JSONResponse ? handlerResponse.toResponse() : handlerResponse;
+				const asResponseObject = 'toResponse' in handlerResponse ? handlerResponse.toResponse() : handlerResponse;
+				if (!(asResponseObject instanceof Response)) {
+					throw new Error(`Invalid function response: received type "${typeof handlerResponse}" is not instance of Response`);
+				}
+				return asResponseObject;
 			} catch (error) {
 				console.error('Octo middleware error:', (error as Error).message || error);
 				return new JSONResponse({
