@@ -1,5 +1,6 @@
 import { OriginChecker, RateLimiter, RateLimiterConfig } from "./accessControl.ts";
 import type { JSONResponse } from "./api.ts";
+import { importFileExtensions } from "./config.ts";
 import type { ServiceConsole } from "./console.ts";
 
 export interface Context {
@@ -54,7 +55,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool
 	};
 	await iterateDirectory(fromDir);
 
-	const importEntries = allEntries.filter(item => ['ts', 'mts', 'js', 'mjs'].some(ext => item.endsWith(`.${ext}`)));
+	const importEntries = allEntries.filter(item => importFileExtensions.some(ext => item.endsWith(`.${ext}`)));
 	if (!importEntries.length) throw new Error(`Failed to load route functions: no modules found in "${fromDir}"`);
 
 	const result: Record<string, RouteCtx> = {};
