@@ -38,7 +38,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			request.headers.get(opts.octo.proxy.requestIdHeader) : undefined) ||
 			Array.apply(null, Array(8)).map(() => {
 				const characters = 'abcdefghijklmnopqrstuvwxyz0123456789'
-				characters.charAt(Math.floor(Math.random() * characters.length))
+				return characters.charAt(Math.floor(Math.random() * characters.length))
 			}).join('');
 
 		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ?
