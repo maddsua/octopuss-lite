@@ -1,4 +1,4 @@
-import { startServer } from "./server/middleware.ts";
+import { startServer } from "./middleware.ts";
 
 startServer({
 	serve: {

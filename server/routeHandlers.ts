@@ -1,15 +1,12 @@
+import { OriginChecker, RateLimiter, RateLimiterConfig } from "./accessControl.ts";
 import type { JSONResponse } from "./api.ts";
 import type { ServiceConsole } from "./console.ts";
-
-export interface RouteChecksControl {
-	origin?: boolean;
-	ratelimit?: boolean;
-};
 
 export interface RouteConfig {
 	expand?: boolean;
 	url?: string;
-	checks?: RouteChecksControl;
+	ratelimit?: RateLimiterConfig | false;
+	allowedOrigings?: string[] | false;
 };
 
 export interface Context {
@@ -26,7 +23,8 @@ export interface RouteCtx {
 		pathname: string;
 		expand: boolean;
 	};
-	checks?: RouteChecksControl;
+	rateLimiter?: RateLimiter | null;
+	originChecker?: OriginChecker | null;
 	handler: RouteHandler;
 };
 
@@ -92,7 +90,8 @@ export const loadRoutes = async (from: RouteSearchResult): Promise<Record<string
 					expand: typeof config.expand === 'boolean' ? config.expand : (config.url?.endsWith('*') || false)
 					//	big todo: add warning for a case when both bool val and url with asterist are set
 				},
-				checks: config.checks,
+				rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
+				originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
 			} satisfies RouteCtx;
 
 		} catch (error) {
