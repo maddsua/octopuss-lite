@@ -22,10 +22,12 @@ interface StartServerOptions {
 
 export const startServer = async (opts?: StartServerOptions) => {
 
-	let searchDir = opts?.octo?.routesDir || 'src/routes';
+	const searchDir = opts?.octo?.routesDir || 'src/routes';
+
+	console.log(`%cIndexing functions in ${searchDir}...`, 'color: yellow');
 
 	const handlers = await findAllRoutes(searchDir);
-	if (!handlers.entries.length) throw new Error(`Failed to load route modules: no modules found in "${searchDir}"`);
+	if (!handlers.entries.length) throw new Error(`Failed to load route functions: no modules found in "${searchDir}"`);
 
 	const routesPool = await loadRoutes(handlers);
 
