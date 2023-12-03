@@ -1,4 +1,4 @@
-import { findAllRoutes, loadRoutes } from "./routeHandlers.ts";
+import { type StaticHandler, findAllRoutes, loadRoutes } from "./routeHandlers.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
@@ -18,6 +18,7 @@ interface OctopussOptions {
 interface StartServerOptions {
 	serve?: Deno.ServeOptions | Deno.ServeTlsOptions;
 	octo?: OctopussOptions;
+	handlers?: Record<string, StaticHandler>;
 };
 
 export const startServer = async (opts?: StartServerOptions) => {
