@@ -1,4 +1,4 @@
-import { type StaticHandler, loadFunctionsFromFS, transformHandlers } from "./routeHandlers.ts";
+import { loadFunctionsFromFS, transformHandlers, type StaticHandler, type HandlersPool } from "./routeHandlers.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
@@ -22,17 +22,21 @@ interface StartServerOptions {
 	handlers?: Record<`/${string}`, StaticHandler>;
 };
 
-export const startServer = async (opts?: StartServerOptions) => {
+class OctoMiddlaware {
 
-	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
+	config: Partial<OctopussOptions>;
+	routesPool: HandlersPool;
+	rateLimiter: RateLimiter | null;
+	originChecker: OriginChecker | null;
 
-	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
+	constructor(routesPool: HandlersPool, config?: Partial<OctopussOptions>) {
+		this.routesPool = routesPool;
+		this.config = config || {};
+		this.rateLimiter = config?.rateLimit ? new RateLimiter(config.rateLimit) : null;
+		this.originChecker = config?.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : null;
+	}
 
-	const globalRateLimiter: RateLimiter | null = opts?.octo?.rateLimit ? new RateLimiter(opts.octo.rateLimit) : null;
-	const globalOriginChecker: OriginChecker | null = opts?.octo?.allowedOrigings?.length ? new OriginChecker(opts.octo.allowedOrigings) : null;
-
-	const httpRequestHandler: Deno.ServeHandler = async (request, info) => {
-
+	async dispatch(request: Request, info: Deno.ServeHandlerInfo): Promise<Response> {
 		const getRequestIdFromProxy = (headerName: string | null | undefined) => {
 			if (!headerName) return undefined;
 			const header = request.headers.get(headerName);
@@ -47,13 +51,13 @@ export const startServer = async (opts?: StartServerOptions) => {
 			return Array.apply(null, Array(8)).map(randomChar).join('');
 		};
 
-		const requestID = getRequestIdFromProxy(opts?.octo?.proxy?.requestIdHeader) || generateRequestId();
-		const requestIP = (opts?.octo?.proxy?.forwardedIPHeader ?
-			request.headers.get(opts.octo.proxy.forwardedIPHeader) : undefined) ||
+		const requestID = getRequestIdFromProxy(this.config.proxy?.requestIdHeader) || generateRequestId();
+		const requestIP = (this.config.proxy?.forwardedIPHeader ?
+			request.headers.get(this.config.proxy.forwardedIPHeader) : undefined) ||
 			info.remoteAddr.hostname;
 
 		const requestOrigin = request.headers.get('origin');
-		const handleCORS = opts?.octo?.handleCORS !== false;
+		const handleCORS = this.config.handleCORS !== false;
 		let allowedOrigin: string | null = null;
 		let exposeRequestID = false;
 		let requestDisplayUrl = '/';
@@ -66,7 +70,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			requestDisplayUrl = pathname + search;
 
 			// find route function
-			let routectx = routesPool[pathname];
+			let routectx = this.routesPool[pathname];
 
 			// match route function
 			if (!routectx) {
@@ -74,7 +78,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 				for (let idx = pathComponents.length - 1; idx >= 0; idx--) {
 	
 					const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
-					const nextCtx = routesPool[nextRoute];
+					const nextCtx = this.routesPool[nextRoute];
 	
 					if (nextCtx?.expandPath) {
 						routectx = nextCtx;
@@ -91,15 +95,15 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 
 			//	check request origin
-			const originChecker = routectx.originChecker !== null ? (routectx.originChecker || globalOriginChecker) : null;
-			if (originChecker) {
+			const useOriginChecker = routectx.originChecker !== null ? (routectx.originChecker || this.originChecker) : null;
+			if (useOriginChecker) {
 
 				if (!requestOrigin) {
 					return new JSONResponse({
 						error_text: 'client not verified'
 					}, { status: 403 }).toResponse();
 				}
-				else if (!originChecker.check(requestOrigin)) {
+				else if (!useOriginChecker.check(requestOrigin)) {
 					console.log('Origin not allowed:', requestOrigin);
 					return new JSONResponse({
 						error_text: 'client not verified'
@@ -113,9 +117,9 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 
 			//	check rate limiter
-			const rateLimiter = routectx.rateLimiter !== null ? (routectx.rateLimiter || globalRateLimiter) : null;
-			if (rateLimiter) {
-				const rateCheck = rateLimiter.check({ ip: requestIP });
+			const useRateLimiter = routectx.rateLimiter !== null ? (routectx.rateLimiter || this.rateLimiter) : null;
+			if (useRateLimiter) {
+				const rateCheck = useRateLimiter.check({ ip: requestIP });
 				if (!rateCheck.ok) {
 					console.log(`Too many requests (${rateCheck.requests}). Wait for ${rateCheck.reset}s`);
 					return new JSONResponse({
@@ -145,7 +149,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 
 			//	expose request id
-			if (opts?.octo?.exposeRequestID) exposeRequestID = true;
+			if (this.config.exposeRequestID) exposeRequestID = true;
 
 			//	execute route function
 			try {
@@ -184,12 +188,22 @@ export const startServer = async (opts?: StartServerOptions) => {
 		console.log(`(${requestIP}) ${request.method} "${requestDisplayUrl}" --> ${middleware.status}`);
 
 		return middleware;
-	};
+	}
+};
+
+
+export const startServer = async (opts?: StartServerOptions) => {
+
+	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
+
+	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
+
+	const middleware = new OctoMiddlaware(routesPool, opts?.octo);
 
 	if (!opts?.serve) {
-		Deno.serve(httpRequestHandler);
+		Deno.serve(middleware.dispatch);
 		return
 	}
 
-	Deno.serve(opts?.serve, httpRequestHandler);
+	Deno.serve(opts?.serve, middleware.dispatch);
 };
