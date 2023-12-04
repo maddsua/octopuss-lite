@@ -22,7 +22,7 @@ interface StartServerOptions {
 	handlers?: Record<`/${string}`, StaticHandler>;
 };
 
-class OctoMiddlaware {
+export class OctoMiddlaware {
 
 	config: Partial<OctopussOptions>;
 	routesPool: HandlersPool;
