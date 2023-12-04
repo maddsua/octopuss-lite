@@ -4,6 +4,20 @@ import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessCont
 import { ServiceConsole } from "./console.ts";
 import { defaultConfig } from "./config.ts";
 
+const getRequestIdFromProxy = (headers: Headers, headerName: string | null | undefined) => {
+	if (!headerName) return undefined;
+	const header = headers.get(headerName);
+	if (!header) return undefined;
+	const shortid = header.slice(0, header.indexOf('-'));
+	return shortid.length <= 8 ? shortid : shortid.slice(0, 8);
+};
+
+const generateRequestId = () => {
+	const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+	const randomChar = () => characters.charAt(Math.floor(Math.random() * characters.length));
+	return Array.apply(null, Array(8)).map(randomChar).join('');
+};
+
 interface OctopussOptions {
 	routesDir?: string;
 	proxy?: {
@@ -37,21 +51,8 @@ export class OctoMiddlaware {
 	}
 
 	async dispatch(request: Request, info: Deno.ServeHandlerInfo): Promise<Response> {
-		const getRequestIdFromProxy = (headerName: string | null | undefined) => {
-			if (!headerName) return undefined;
-			const header = request.headers.get(headerName);
-			if (!header) return undefined;
-			const shortid = header.slice(0, header.indexOf('-'));
-			return shortid.length <= 8 ? shortid : shortid.slice(0, 8);
-		};
 
-		const generateRequestId = () => {
-			const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
-			const randomChar = () => characters.charAt(Math.floor(Math.random() * characters.length));
-			return Array.apply(null, Array(8)).map(randomChar).join('');
-		};
-
-		const requestID = getRequestIdFromProxy(this.config.proxy?.requestIdHeader) || generateRequestId();
+		const requestID = getRequestIdFromProxy(request.headers, this.config.proxy?.requestIdHeader) || generateRequestId();
 		const requestIP = (this.config.proxy?.forwardedIPHeader ?
 			request.headers.get(this.config.proxy.forwardedIPHeader) : undefined) ||
 			info.remoteAddr.hostname;
