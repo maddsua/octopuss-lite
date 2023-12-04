@@ -64,7 +64,7 @@ export class OctoMiddlaware {
 
 		const console = new ServiceConsole(requestID);
 
-		const middleware = await (async () => {
+		const routeResponse = await (async () => {
 
 			const { pathname, search } = new URL(request.url);
 			requestDisplayUrl = pathname + search;
@@ -180,17 +180,16 @@ export class OctoMiddlaware {
 		})();
 
 		//	add some headers so the shit always works
-		middleware.headers.set('x-powered-by', 'octopuss');
-		if (allowedOrigin) middleware.headers.set('Access-Control-Allow-Origin', allowedOrigin);
-		if (exposeRequestID) middleware.headers.set('x-request-id', requestID);
+		routeResponse.headers.set('x-powered-by', 'octopuss');
+		if (allowedOrigin) routeResponse.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+		if (exposeRequestID) routeResponse.headers.set('x-request-id', requestID);
 
 		//	log for, you know, reasons
-		console.log(`(${requestIP}) ${request.method} "${requestDisplayUrl}" --> ${middleware.status}`);
+		console.log(`(${requestIP}) ${request.method} "${requestDisplayUrl}" --> ${routeResponse.status}`);
 
-		return middleware;
+		return routeResponse;
 	}
 };
-
 
 export const startServer = async (opts?: StartServerOptions) => {
 
