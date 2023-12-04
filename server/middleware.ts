@@ -36,7 +36,7 @@ interface StartServerOptions {
 	handlers?: Record<`/${string}`, StaticHandler>;
 };
 
-export class OctoMiddlaware {
+export class OctoMiddleware {
 
 	config: Partial<OctopussOptions>;
 	routesPool: HandlersPool;
@@ -196,7 +196,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
 	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
-	const middleware = new OctoMiddlaware(routesPool, opts?.octo);
+	const middleware = new OctoMiddleware(routesPool, opts?.octo);
 
 	if (!opts?.serve) {
 		Deno.serve((request, info) => middleware.handler(request, info));
