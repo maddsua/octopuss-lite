@@ -143,12 +143,23 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 			//	execute route function
 			try {
+
 				const handlerResponse = await routectx.handler(request, { console, requestID, requestIP });
-				const asResponseObject = 'toResponse' in handlerResponse ? handlerResponse.toResponse() : handlerResponse;
-				if (!(asResponseObject instanceof Response)) {
-					throw new Error(`Invalid function response: received type "${typeof handlerResponse}" is not instance of Response`);
+
+				//	here we convert a non-standard response object to a standard one
+				//	all non standard should provide a "toResponse" method to do that
+				const responseObject = handlerResponse instanceof Response ? handlerResponse : handlerResponse.toResponse();
+
+				//	and if after that it's still not a Response we just crash the request
+				if (!(responseObject instanceof Response)) {
+					const typeErrorReport = (handlerResponse && typeof handlerResponse === 'object') ?
+						`object keys ({${Object.keys(handlerResponse).join(', ')}}) don't match handler response interface` :
+						`variable of type "${typeof handlerResponse}" is not a valid handler response`;
+					throw new Error('Invalid function response: ' + typeErrorReport);
 				}
-				return asResponseObject;
+
+				return responseObject;
+
 			} catch (error) {
 				console.error('Octo middleware error:', (error as Error).message || error);
 				return new JSONResponse({
