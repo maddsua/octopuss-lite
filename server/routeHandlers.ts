@@ -12,8 +12,8 @@ export interface Context {
 export interface RouteConfig {
 	expand?: boolean;
 	url?: string;
-	ratelimit?: RateLimiterConfig | false;
-	allowedOrigings?: string[] | false;
+	ratelimit?: RateLimiterConfig | null;
+	allowedOrigings?: string[] | null;
 };
 
 export type RouteResponse = JSONResponse<object> | Response;
@@ -32,8 +32,8 @@ export interface RouteCtx {
 };
 
 export const applyConfig = (config: RouteConfig): Partial<RouteCtx> => ({
-	rateLimiter: config.ratelimit === false ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
-	originChecker: config.allowedOrigings === false ? null :(config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
+	rateLimiter: config.ratelimit === null ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
+	originChecker: config.allowedOrigings === null ? null : (config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
 });
 
 type HandlersPool = Record<string, RouteCtx>;
