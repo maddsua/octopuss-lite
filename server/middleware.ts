@@ -195,9 +195,7 @@ export class OctoMiddlaware {
 export const startServer = async (opts?: StartServerOptions) => {
 
 	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
-
 	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
-
 	const middleware = new OctoMiddlaware(routesPool, opts?.octo);
 
 	if (!opts?.serve) {
