@@ -36,7 +36,7 @@ export const applyConfig = (config: RouteConfig): Partial<RouteCtx> => ({
 	originChecker: config.allowedOrigings === null ? null : (config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
 });
 
-type HandlersPool = Record<string, RouteCtx>;
+export type HandlersPool = Record<string, RouteCtx>;
 
 export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool> => {
 
