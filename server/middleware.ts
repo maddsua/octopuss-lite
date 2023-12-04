@@ -108,6 +108,9 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 				allowedOrigin = requestOrigin;
 			}
+			else if (requestOrigin && allowedOrigin) {
+				allowedOrigin = '*';
+			}
 
 			//	check rate limiter
 			const rateLimiter = routectx.rateLimiter !== null ? (routectx.rateLimiter || globalRateLimiter) : null;
@@ -174,7 +177,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 		//	add some headers so the shit always works
 		middleware.headers.set('x-powered-by', 'octopuss');
-		if (allowedOrigin || handleCORS) middleware.headers.set('Access-Control-Allow-Origin', allowedOrigin || '*');
+		if (allowedOrigin) middleware.headers.set('Access-Control-Allow-Origin', allowedOrigin);
 		if (exposeRequestID) middleware.headers.set('x-request-id', requestID);
 
 		//	log for, you know, reasons
