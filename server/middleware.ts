@@ -199,9 +199,9 @@ export const startServer = async (opts?: StartServerOptions) => {
 	const middleware = new OctoMiddleware(routesPool, opts?.octo);
 
 	if (!opts?.serve) {
-		Deno.serve((request, info) => middleware.handler(request, info));
+		Deno.serve(middleware.handler.bind(middleware));
 		return
 	}
 
-	Deno.serve(opts?.serve, (request, info) => middleware.handler(request, info));
+	Deno.serve(opts?.serve, middleware.handler.bind(middleware));
 };
