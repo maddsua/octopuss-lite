@@ -50,7 +50,7 @@ export class OctoMiddlaware {
 		this.originChecker = config?.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : null;
 	}
 
-	async dispatch(request: Request, info: Deno.ServeHandlerInfo): Promise<Response> {
+	async handler (request: Request, info: Deno.ServeHandlerInfo): Promise<Response> {
 
 		const requestID = getRequestIdFromProxy(request.headers, this.config.proxy?.requestIdHeader) || generateRequestId();
 		const requestIP = (this.config.proxy?.forwardedIPHeader ?
@@ -199,9 +199,9 @@ export const startServer = async (opts?: StartServerOptions) => {
 	const middleware = new OctoMiddlaware(routesPool, opts?.octo);
 
 	if (!opts?.serve) {
-		Deno.serve((request, info) => middleware.dispatch(request, info));
+		Deno.serve((request, info) => middleware.handler(request, info));
 		return
 	}
 
-	Deno.serve(opts?.serve, (request, info) => middleware.dispatch(request, info));
+	Deno.serve(opts?.serve, (request, info) => middleware.handler(request, info));
 };
