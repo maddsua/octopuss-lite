@@ -53,6 +53,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 			info.remoteAddr.hostname;
 
 		const requestOrigin = request.headers.get('origin');
+		const handleCORS = opts?.octo?.handleCORS !== false;
 		let allowedOrigin: string | null = null;
 		let exposeRequestID = false;
 		let requestDisplayUrl = '/';
@@ -92,16 +93,20 @@ export const startServer = async (opts?: StartServerOptions) => {
 			//	check request origin
 			const originChecker = routectx.originChecker !== null ? (routectx.originChecker || globalOriginChecker) : null;
 			if (originChecker) {
+
 				if (!requestOrigin) {
 					return new JSONResponse({
 						error_text: 'client not verified'
 					}, { status: 403 }).toResponse();
-				} else if (!originChecker.check(requestOrigin)) {
+				}
+				else if (!originChecker.check(requestOrigin)) {
 					console.log('Origin not allowed:', requestOrigin);
 					return new JSONResponse({
 						error_text: 'client not verified'
 					}, { status: 403 }).toResponse();
 				}
+
+				allowedOrigin = requestOrigin;
 			}
 
 			//	check rate limiter
@@ -117,15 +122,13 @@ export const startServer = async (opts?: StartServerOptions) => {
 			}
 
 			//	respond to CORS preflixgt
-			if (request.method == 'OPTIONS' && opts?.octo?.handleCORS !== false) {
+			if (request.method == 'OPTIONS' && handleCORS) {
 
 				const requestedCorsHeaders = request.headers.get('Access-Control-Request-Headers');
 				const defaultCorsHeaders = 'Origin, X-Requested-With, Content-Type, Accept';
 
 				const requestedCorsMethod = request.headers.get('Access-Control-Request-Method');
 				const defaultCorsMethods = 'GET, POST, PUT, OPTIONS, DELETE';
-
-				if (!allowedOrigin) allowedOrigin = '*';
 
 				return new JSONResponse(null, {
 					status: 204,
@@ -171,7 +174,7 @@ export const startServer = async (opts?: StartServerOptions) => {
 
 		//	add some headers so the shit always works
 		middleware.headers.set('x-powered-by', 'octopuss');
-		if (allowedOrigin) middleware.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+		if (allowedOrigin || handleCORS) middleware.headers.set('Access-Control-Allow-Origin', allowedOrigin || '*');
 		if (exposeRequestID) middleware.headers.set('x-request-id', requestID);
 
 		//	log for, you know, reasons
