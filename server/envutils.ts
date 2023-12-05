@@ -13,6 +13,5 @@ export const getBool = (envVar: string | null | undefined, fallback?: boolean): 
 
 export const getCommaSeparated = (envVar: string | null | undefined): string[] | undefined =>  {
 	if (!envVar?.length) return undefined;
-	const entries = envVar.split(',').map(item => item.trim()).filter(item => !!item.length);
-	return entries.length ? entries : undefined;
+	return envVar.split(',').map(item => item.trim()).filter(item => !!item.length);
 };
