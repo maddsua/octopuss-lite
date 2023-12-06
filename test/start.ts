@@ -1,4 +1,4 @@
-import { startServer } from "../server/middleware.ts";
+import { startServer } from "../mod.ts";
 
 await startServer({
 	serve: {
