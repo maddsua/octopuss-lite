@@ -1,5 +1,5 @@
-import { startServer } from "./server.ts";
-import { getNumber } from "./envutils.ts";
+import { startServer } from "./server/server.ts";
+import { getNumber } from "./server/envutils.ts";
 
 await startServer({
 	serve: {
