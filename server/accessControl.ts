@@ -35,11 +35,11 @@ export class OriginChecker {
 	}
 };
 
-
 export interface RateLimiterConfig {
 	period: number,
 	requests: number
 };
+
 export class RateLimiter {
 
 	config: RateLimiterConfig;

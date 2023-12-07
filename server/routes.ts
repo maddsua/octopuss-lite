@@ -1,44 +1,23 @@
-import { OriginChecker, RateLimiter, RateLimiterConfig } from "./accessControl.ts";
-import type { JSONResponse } from "./api.ts";
+import { RateLimiterConfig } from "./accessControl.ts";
+import type { RouteHandler } from "./api.ts";
 import { importFileExtensions } from "./config.ts";
-import type { ServiceConsole } from "./console.ts";
-
-export interface Context {
-	console: ServiceConsole;
-	requestIP: string;
-	requestID: string | null;
-};
 
 export interface RouteConfig {
 	expand?: boolean;
-	url?: string;
 	ratelimit?: RateLimiterConfig | null;
 	allowedOrigings?: string[] | null;
 };
 
-export type RouteResponse = JSONResponse<object> | Response;
-export type RouteHandler = (request: Request, context: Context) => Promise<RouteResponse> | RouteResponse;
-
-export interface StaticHandler {
-	handler: RouteHandler;
-	config?: Omit<RouteConfig, 'url'>;
+export interface FileRouteConfig extends RouteConfig {
+	url?: string;
 };
 
-export interface RouteCtx {
-	expandPath?: boolean;
-	rateLimiter?: RateLimiter | null;
-	originChecker?: OriginChecker | null;
+export interface RouteCtx extends RouteConfig {
 	handler: RouteHandler;
 };
+export type ServerRoutes = Record<string, RouteCtx>;
 
-export const applyConfig = (config: RouteConfig): Partial<RouteCtx> => ({
-	rateLimiter: config.ratelimit === null ? null : (Object.keys(config.ratelimit || {}).length ? new RateLimiter(config.ratelimit) : undefined),
-	originChecker: config.allowedOrigings === null ? null : (config.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : undefined)
-});
-
-export type HandlersPool = Record<string, RouteCtx>;
-
-export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool> => {
+export const loadFunctionsFromFS = async (fromDir: string): Promise<ServerRoutes> => {
 
 	console.log(`\n%c Indexing functions in ${fromDir}... \n`, 'background-color: green; color: black');
 
@@ -60,7 +39,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool
 	const importEntries = allEntries.filter(item => importFileExtensions.some(ext => item.endsWith(`.${ext}`)));
 	if (!importEntries.length) throw new Error(`Failed to load route functions: no modules found in "${fromDir}"`);
 
-	const result: Record<string, RouteCtx> = {};
+	const result: ServerRoutes = {};
 
 	for (const entry of importEntries) {
 
@@ -76,7 +55,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool
 			const handler = (imported['default'] || imported['handler']);
 			if (!handler || typeof handler !== 'function') throw new Error('No handler exported');
 	
-			const config = (imported['config'] || {}) as RouteConfig;
+			const config = (imported['config'] || {}) as FileRouteConfig;
 			if (typeof config !== 'object') throw new Error('Config invalid');
 
 			const pathNoExt = entry.slice(fromDir.length, entry.lastIndexOf('.'));
@@ -87,16 +66,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool
 			const pathname = typeof customUrl === 'string' ? customUrl : fsRoutedUrl;
 			if (!pathname.startsWith('/')) throw new Error(`Invalid route url: ${pathname}`);
 
-			const expandPathByUrl = config.url?.endsWith('/*');
-			const expandFlagProvided = typeof config.expand === 'boolean';
-			if (expandPathByUrl && expandFlagProvided) {
-				console.warn(`Module %c"${entry}"%c has both expanding path and %cconfig.expand%c set, the last will be used`, 'color: yellow', 'color: inherit', 'color: yellow', 'color: inherit');
-			}
-
-			result[pathname] = Object.assign({
-				handler,
-				expandPath: expandFlagProvided ? (config.expand as boolean) : (expandPathByUrl || false)
-			}, applyConfig(config));
+			result[pathname] = Object.assign({}, config, { handler });
 
 		} catch (error) {
 			throw new Error(`Failed to import route module ${entry}: ${(error as Error).message}`);
@@ -106,13 +76,4 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<HandlersPool
 	console.log(`%cLoaded ${allEntries.length} functions`, 'color: green')
 
 	return result;
-};
-
-export const transformHandlers = (functions: Record<string, StaticHandler>): HandlersPool => {
-	return Object.fromEntries(Object.entries(functions).map(([key, value]) => {
-		return [key, Object.assign({
-			handler: value.handler,
-			expandPath: key.endsWith('/*')
-		}, applyConfig(value.config || {}))]
-	}));
 };

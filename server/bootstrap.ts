@@ -1,4 +1,4 @@
-import { startServer } from "./middleware.ts";
+import { startServer } from "./server.ts";
 import { getNumber } from "./envutils.ts";
 
 await startServer({

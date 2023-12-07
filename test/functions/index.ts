@@ -1,6 +1,6 @@
 import Component from './index.tsx';
 
-import { RouteConfig } from "../../server/routeHandlers.ts";
+import { RouteConfig } from "../../server/routes.ts";
 
 export const config: RouteConfig = {
 	expand: true

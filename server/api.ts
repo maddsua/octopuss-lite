@@ -1,3 +1,4 @@
+import type { ServiceConsole } from "./console.ts";
 
 export class JSONResponse<T extends object> {
 
@@ -22,3 +23,12 @@ export class JSONResponse<T extends object> {
 		});
 	}
 };
+
+export interface RequestContext {
+	console: ServiceConsole;
+	requestIP: string;
+	requestID: string | null;
+};
+
+export type RouteResponse = JSONResponse<object> | Response;
+export type RouteHandler = (request: Request, context: RequestContext) => Promise<RouteResponse> | RouteResponse;

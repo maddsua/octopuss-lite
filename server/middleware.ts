@@ -1,7 +1,8 @@
-import { type StaticHandler, type HandlersPool } from "./routeHandlers.ts";
+import { ServerRoutes } from "./routes.ts";
 import { JSONResponse } from "./api.ts";
 import { OriginChecker, RateLimiter, type RateLimiterConfig } from "./accessControl.ts";
 import { ServiceConsole } from "./console.ts";
+import { RouteHandler } from "../mod.ts";
 
 const getRequestIdFromProxy = (headers: Headers, headerName: string | null | undefined) => {
 	if (!headerName) return undefined;
@@ -30,34 +31,56 @@ export interface OctopussOptions {
 	healthcheckPath?: `/${string}`;
 };
 
-export interface StartServerOptions {
-	serve?: Deno.ServeOptions | Deno.ServeTlsOptions;
-	octo?: OctopussOptions;
-	handlers?: Record<`/${string}`, StaticHandler>;
+interface HandlerCtx {
+	expandPath?: boolean;
+	rateLimiter?: RateLimiter | null;
+	originChecker?: OriginChecker | null;
+	handler: RouteHandler;
 };
 
 export class OctoMiddleware {
 
 	config: Partial<OctopussOptions>;
-	routesPool: HandlersPool;
+	handlersPool: Record<string, HandlerCtx>;
 	rateLimiter: RateLimiter | null;
 	originChecker: OriginChecker | null;
 
-	constructor(routesPool: HandlersPool, config?: Partial<OctopussOptions>) {
+	constructor (handlers: ServerRoutes, config?: Partial<OctopussOptions>) {
 
-		this.routesPool = routesPool;
 		this.config = config || {};
 		this.rateLimiter = config?.rateLimit ? new RateLimiter(config.rateLimit) : null;
 		this.originChecker = config?.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : null;
 
+		//	transform routes
+		this.handlersPool = {};
+
+		for (const route in handlers) {
+
+			const routeCtx = handlers[route];
+
+			const handlerCtx: HandlerCtx = {
+				handler: routeCtx.handler,
+				rateLimiter: routeCtx.ratelimit === null ? null : (Object.keys(routeCtx.ratelimit || {}).length ? new RateLimiter(routeCtx.ratelimit) : undefined),
+				originChecker: routeCtx.allowedOrigings === null ? null : (routeCtx.allowedOrigings?.length ? new OriginChecker(routeCtx.allowedOrigings) : undefined),
+				expandPath: routeCtx.expand || route.endsWith('/*')
+			};
+
+			//	warn about path expansion
+			if (routeCtx.expand === false && handlerCtx.expandPath) {
+				console.warn(`Route %c"${route}"%c has both expanding path and %cconfig.expand%c set, the last will be used`, 'color: yellow', 'color: inherit', 'color: yellow', 'color: inherit');
+			}
+
+			this.handlersPool[route] = handlerCtx;
+		}
+
 		//	setup healthcheck path
 		if (this.config?.healthcheckPath) {
 
-			if (this.routesPool[this.config.healthcheckPath]) {
+			if (this.handlersPool[this.config.healthcheckPath]) {
 				console.warn(`%cPath collision between healthcheck path and route function%c (${this.config.healthcheckPath})`, 'color: yellow', 'color: white');
 			}
 
-			this.routesPool[this.config.healthcheckPath] = {
+			this.handlersPool[this.config.healthcheckPath] = {
 				handler: () => new Response(null, { status: 200 })
 			};
 		}
@@ -84,7 +107,7 @@ export class OctoMiddleware {
 			requestDisplayUrl = pathname + search;
 
 			// find route function
-			let routectx = this.routesPool[pathname];
+			let routectx = this.handlersPool[pathname];
 
 			// match route function
 			if (!routectx) {
@@ -92,7 +115,7 @@ export class OctoMiddleware {
 				for (let idx = pathComponents.length - 1; idx >= 0; idx--) {
 	
 					const nextRoute = '/' + pathComponents.slice(0, idx).join('/');
-					const nextCtx = this.routesPool[nextRoute];
+					const nextCtx = this.handlersPool[nextRoute];
 	
 					if (nextCtx?.expandPath) {
 						routectx = nextCtx;

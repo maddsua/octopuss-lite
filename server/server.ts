@@ -1,12 +1,18 @@
-import { loadFunctionsFromFS, transformHandlers } from "./routeHandlers.ts";
+import { type ServerRoutes, loadFunctionsFromFS } from "./routes.ts";
 import { defaultConfig } from "./config.ts";
-import { OctoMiddleware, type StartServerOptions } from "./middleware.ts";
+import { OctoMiddleware, type OctopussOptions } from "./middleware.ts";
+
+export interface StartServerOptions {
+	serve?: Deno.ServeOptions | Deno.ServeTlsOptions;
+	octo?: OctopussOptions;
+	handlers?: ServerRoutes;
+};
 
 export const startServer = async (opts?: StartServerOptions) => {
 
 	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
-	const routesPool = opts?.handlers ? transformHandlers(opts.handlers) : await loadFunctionsFromFS(searchDir);
-	const middleware = new OctoMiddleware(routesPool, opts?.octo);
+	const routes = opts?.handlers || await loadFunctionsFromFS(searchDir);
+	const middleware = new OctoMiddleware(routes, opts?.octo);
 
 	if (!opts?.serve) {
 		Deno.serve(middleware.handler.bind(middleware));
