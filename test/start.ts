@@ -6,5 +6,6 @@ await startServer({
 	},
 	octo: {
 		routesDir: 'test/functions',
+		healthcheckPath: '/health'
 	}
 });
