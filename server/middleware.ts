@@ -27,6 +27,7 @@ export interface OctopussOptions {
 	handleCORS?: boolean;
 	allowedOrigings?: string[];
 	exposeRequestID?: boolean;
+	healthcheckPath?: `/${string}`;
 };
 
 export interface StartServerOptions {
@@ -43,10 +44,23 @@ export class OctoMiddleware {
 	originChecker: OriginChecker | null;
 
 	constructor(routesPool: HandlersPool, config?: Partial<OctopussOptions>) {
+
 		this.routesPool = routesPool;
 		this.config = config || {};
 		this.rateLimiter = config?.rateLimit ? new RateLimiter(config.rateLimit) : null;
 		this.originChecker = config?.allowedOrigings?.length ? new OriginChecker(config.allowedOrigings) : null;
+
+		//	setup healthcheck path
+		if (this.config?.healthcheckPath) {
+
+			if (this.routesPool[this.config.healthcheckPath]) {
+				console.warn(`%cPath collision between healthcheck path and route function%c (${this.config.healthcheckPath})`, 'color: yellow', 'color: white');
+			}
+
+			this.routesPool[this.config.healthcheckPath] = {
+				handler: () => new Response(null, { status: 200 })
+			};
+		}
 	}
 
 	async handler (request: Request, info: Deno.ServeHandlerInfo): Promise<Response> {

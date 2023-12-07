@@ -25,7 +25,7 @@ export interface StaticHandler {
 };
 
 export interface RouteCtx {
-	expandPath: boolean;
+	expandPath?: boolean;
 	rateLimiter?: RateLimiter | null;
 	originChecker?: OriginChecker | null;
 	handler: RouteHandler;
