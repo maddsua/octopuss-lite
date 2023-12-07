@@ -15,7 +15,7 @@ export interface FileRouteConfig extends RouteConfig {
 export interface RouteCtx extends RouteConfig {
 	handler: RouteHandler;
 };
-export type ServerRoutes = Record<string, RouteCtx>;
+export type ServerRoutes = Record<`/${string}`, RouteCtx>;
 
 export const loadFunctionsFromFS = async (fromDir: string): Promise<ServerRoutes> => {
 
@@ -39,7 +39,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<ServerRoutes
 	const importEntries = allEntries.filter(item => importFileExtensions.some(ext => item.endsWith(`.${ext}`)));
 	if (!importEntries.length) throw new Error(`Failed to load route functions: no modules found in "${fromDir}"`);
 
-	const result: ServerRoutes = {};
+	const routes: ServerRoutes = {};
 
 	for (const entry of importEntries) {
 
@@ -66,7 +66,7 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<ServerRoutes
 			const pathname = typeof customUrl === 'string' ? customUrl : fsRoutedUrl;
 			if (!pathname.startsWith('/')) throw new Error(`Invalid route url: ${pathname}`);
 
-			result[pathname] = Object.assign({}, config, { handler });
+			routes[pathname as keyof typeof routes] = Object.assign({}, config, { handler });
 
 		} catch (error) {
 			throw new Error(`Failed to import route module ${entry}: ${(error as Error).message}`);
@@ -75,5 +75,5 @@ export const loadFunctionsFromFS = async (fromDir: string): Promise<ServerRoutes
 
 	console.log(`%cLoaded ${allEntries.length} functions`, 'color: green')
 
-	return result;
+	return routes;
 };

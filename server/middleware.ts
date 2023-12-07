@@ -56,7 +56,7 @@ export class OctoMiddleware {
 
 		for (const route in handlers) {
 
-			const routeCtx = handlers[route];
+			const routeCtx = handlers[route as keyof typeof handlers];
 
 			const handlerCtx: HandlerCtx = {
 				handler: routeCtx.handler,
