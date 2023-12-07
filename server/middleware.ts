@@ -45,7 +45,7 @@ export class OctoMiddleware {
 	rateLimiter: RateLimiter | null;
 	originChecker: OriginChecker | null;
 
-	constructor (handlers: ServerRoutes, config?: Partial<OctopussOptions>) {
+	constructor (routes: ServerRoutes, config?: Partial<OctopussOptions>) {
 
 		this.config = config || {};
 		this.rateLimiter = config?.rateLimit ? new RateLimiter(config.rateLimit) : null;
@@ -54,9 +54,9 @@ export class OctoMiddleware {
 		//	transform routes
 		this.handlersPool = {};
 
-		for (const route in handlers) {
+		for (const route in routes) {
 
-			const routeCtx = handlers[route as keyof typeof handlers];
+			const routeCtx = routes[route as keyof typeof routes];
 
 			const handlerCtx: HandlerCtx = {
 				handler: routeCtx.handler,
