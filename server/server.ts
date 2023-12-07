@@ -5,13 +5,13 @@ import { OctoMiddleware, type OctopussOptions } from "./middleware.ts";
 export interface StartServerOptions {
 	serve?: Deno.ServeOptions | Deno.ServeTlsOptions;
 	octo?: OctopussOptions;
-	handlers?: ServerRoutes;
+	routes?: ServerRoutes;
 };
 
 export const startServer = async (opts?: StartServerOptions) => {
 
 	const searchDir = opts?.octo?.routesDir || defaultConfig.routesDir;
-	const routes = opts?.handlers || await loadFunctionsFromFS(searchDir);
+	const routes = opts?.routes || await loadFunctionsFromFS(searchDir);
 	const middleware = new OctoMiddleware(routes, opts?.octo);
 
 	if (!opts?.serve) {
