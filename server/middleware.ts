@@ -54,11 +54,11 @@ export class OctoMiddleware {
 		if (this.config?.healthcheckPath) {
 
 			if (this.routesPool[this.config.healthcheckPath]) {
-				console.warn(`Path collision between healthcheck path and route function (${this.config.healthcheckPath})`);
+				console.warn(`%cPath collision between healthcheck path and route function%c (${this.config.healthcheckPath})`, 'color: yellow', 'color: white');
 			}
 
 			this.routesPool[this.config.healthcheckPath] = {
-				handler: () => new Response()
+				handler: () => new Response(null, { status: 200 })
 			};
 		}
 	}
