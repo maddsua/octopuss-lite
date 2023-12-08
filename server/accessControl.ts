@@ -4,7 +4,22 @@ export class OriginChecker {
 	allowedOrigins: string[];
 
 	constructor(origins: string[]) {
-		this.allowedOrigins = origins;
+
+		this.allowedOrigins = [];
+
+		for (const entry of origins) {
+
+			if (entry.includes('://')) {
+				try {
+					const { hostname } = new URL(entry);
+					this.allowedOrigins.push(hostname);
+				} catch (error) {
+					console.error(`Invalid origin string: "${entry}"`);
+				}
+			}
+
+			this.allowedOrigins.push(entry);
+		}
 	}
 
 	check(rqOrigin: string) {
