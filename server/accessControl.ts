@@ -9,16 +9,16 @@ export class OriginChecker {
 
 		for (const entry of origins) {
 
-			if (entry.includes('://')) {
-				try {
-					const { hostname } = new URL(entry);
-					this.allowedOrigins.push(hostname);
-				} catch (error) {
-					console.error(`Invalid origin string: "${entry}"`);
-				}
+			if (!entry.includes('://')) {
+				this.allowedOrigins.push(entry);
+				continue;
 			}
 
-			this.allowedOrigins.push(entry);
+			try {
+				this.allowedOrigins.push(new URL(entry).hostname);
+			} catch (error) {
+				console.error(`Invalid origin string: "${entry}"`);
+			}
 		}
 	}
 
