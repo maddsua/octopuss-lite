@@ -11,7 +11,9 @@ export const getBool = (envVar: string | null | undefined, fallback?: boolean): 
 	return envVar.toLowerCase().trim() === 'true';
 }
 
-export const getCommaSeparated = (envVar: string | null | undefined): string[] | undefined =>  {
+export const getSeparatedList = (envVar: string | null | undefined, token?: string): string[] | undefined =>  {
 	if (!envVar?.length) return undefined;
-	return envVar.split(',').map(item => item.trim()).filter(item => !!item.length);
+	return envVar.split(token || ',').map(item => item.trim()).filter(item => item.length);
 };
+
+export const getCommaSeparated = (envVar: string | null | undefined): string[] | undefined => getSeparatedList(envVar);
