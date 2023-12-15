@@ -1,3 +1,9 @@
+## ⚠ This project was renamed and moved here: https://github.com/maddsua/lambda-lite
+
+Reason? This name is kinda dumb and is too cheeky. Yeah it's fun to say it outlout on Railwayapp's server and confuse the shit out of Brody (hi legend 👋) and my collegues giggle everytime they hear it too buuuut it’s somewhat hard to explain to customers and technically this project is just less confusing that way
+
+---
+
 # octopuss-lite
 
 Deno based API server framework
